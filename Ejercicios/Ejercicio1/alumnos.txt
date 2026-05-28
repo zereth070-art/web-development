@@ -1,3 +1,0 @@
-111A,Lucia,1
-222B,Carlos,2
-333C,Maria,2

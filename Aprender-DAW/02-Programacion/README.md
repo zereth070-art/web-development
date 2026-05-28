@@ -1,4 +1,4 @@
-# Programación
+# Programacion
 
 ## Temas
 
@@ -8,11 +8,11 @@
 - Funciones.
 - Arrays.
 - Objetos.
-- Programación modular.
+- Programacion modular.
 - Manejo de errores.
-- Pruebas básicas.
+- Pruebas basicas.
 
-## Prácticas
+## Practicas
 
 - Conversor de unidades.
 - Calculadora.
@@ -20,7 +20,10 @@
 - Gestor de notas.
 - Juego sencillo por consola.
 
+## Recuperacion
+
+- [Pack de recuperacion de Programacion](recuperacion-programacion/README.md): lectura/escritura, colecciones, excepciones, POO avanzado, simulacros y chuleta rapida.
+
 ## Resultado esperado
 
-Resolver problemas dividiéndolos en partes pequeñas y escribiendo código claro, probado y mantenible.
-
+Resolver problemas dividiendolos en partes pequenas y escribiendo codigo claro, probado y mantenible.

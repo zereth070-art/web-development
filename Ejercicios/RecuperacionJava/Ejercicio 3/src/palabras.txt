@@ -1,0 +1,7 @@
+Java es un lenguaje muy usado en programación.
+Muchos estudiantes practican Java todos los días.
+La programación requiere práctica y paciencia.
+Algunas personas prefieren Python, otras Java.
+Practicar ejercicios ayuda a mejorar la lógica.
+Java puede trabajar con archivos y colecciones.
+Leer archivos de texto es muy común en DAW.

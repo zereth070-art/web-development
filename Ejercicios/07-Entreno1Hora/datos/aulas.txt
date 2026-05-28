@@ -1,0 +1,7 @@
+A01,Programacion 1,30,INFORMATICA
+A02,Base de datos,25,INFORMATICA
+A03,Teoria 1,40,TEORIA
+A04,Laboratorio,15,LABORATORIO
+MALFORMADA
+A05,Salon de actos,no-numero,TEORIA
+A06,Redes,20,INFORMATICA
