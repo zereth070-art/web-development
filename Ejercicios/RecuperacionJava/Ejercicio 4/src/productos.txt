@@ -1,5 +1,0 @@
-Teclado,45
-Ratón,20
-Monitor,180
-USB,10
-Portátil,900

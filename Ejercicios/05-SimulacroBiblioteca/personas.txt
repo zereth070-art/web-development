@@ -1,6 +1,0 @@
-ALUMNO,Ana,111A,2,
-PROFESOR,Luis,222B,Informatica,true
-ALUMNO,Marcos,333C,1,
-ALUMNO,Sara,444D,3,
-PROFESOR,Elena,555E,Bases de datos,false
-LineaMal

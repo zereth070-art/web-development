@@ -1,3 +1,0 @@
-Estudiar Java,PENDIENTE
-Comprar pan,HECHO
-Repasar XML,PENDIENTE
