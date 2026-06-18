@@ -1,50 +1,88 @@
 package com.zion.pomodorozion;
 
-
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+
 @Service
 public class TaskService {
+    private final TaskRepository taskRepository;
 
-    private final TaskRepository repository;
+    public TaskService(TaskRepository taskRepository) {
+        this.taskRepository = taskRepository;
+    }
+    
+    //----------------
+    //CREATE
+    //----------------
 
-    public TaskService(TaskRepository repository) {
-        this.repository = repository;
+    public TaskDTO createTask(TaskCreateDTO dto) {
+        Task task = new Task(
+            dto.getTitle(),
+        dto.getEstimatedPomodoros()
+    );
+            
+    Task saved = taskRepository.save(task);
+    return mapToDTO(saved);
     }
 
-    public List<Task> getAllTasks() {
-        return repository.findAll();
+    //----------------
+    //GET ALL
+    //----------------
+    public List<TaskDTO> getAllTasks() {
+        return taskRepository.findAll()
+            .stream()
+            .map(this::mapToDTO)
+            .toList();
+    }
 
+    //----------------
+    //GET BY ID
+    //----------------
+    public TaskDTO getTaskById(Long id) {
+        Task task = taskRepository.findById(id)
+        .orElseThrow(() -> new RuntimeException("Task not found with id: " + id));
         
+        return mapToDTO(task);
     }
 
-    public Task createTask(Task task) {
-        if (task.getTitle() == null || task.getTitle().isBlank()) {
-        throw new IllegalArgumentException("El título es obligatorio");
+    //----------------
+    //UPDATE (simple)
+    //----------------
+    public TaskDTO updateTask(Long id, TaskCreateDTO dto) {
+        Task task = taskRepository.findById(id)
+        .orElseThrow(() -> new RuntimeException("Task not found with id: " + id));
+
+        task.setTitle(dto.getTitle());
+        task.setEstimatedPomodoros(dto.getEstimatedPomodoros());
+
+        Task updated = taskRepository.save(task);
+        return mapToDTO(updated);
     }
 
-    return repository.save(task);
+    //----------------
+    //DELETE
+    //----------------
+    public void deleteTask(Long id) {
+        if( !taskRepository.existsById(id)){
+            throw new RuntimeException("Task not found");
+        }
+
+        taskRepository.deleteById(id);
     }
 
-    public Task getTaskById(long id) {
-        return repository.findById(id).orElseThrow(() -> new RuntimeException("Tarea no encontrada"));
+    //----------------
+    //Mapper
+    //----------------
+    private TaskDTO mapToDTO(Task task) {
+        return new TaskDTO(
+            task.getId(),
+            task.getTitle(),
+            task.getStatus(),
+             task.getEstimatedPomodoros(), 
+            task.getCompletedPomodoros()
+        );
     }
 
-    public void deleteTask(long id){
-        repository.deleteById(id);
-    }
-
-    public Task updateTask(Long id, Task task) {
-        Task newTask = repository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Tarea no encontrada"));
-        
-        Task existingTask = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Tarea no encontrada"));
-        existingTask.setTitle(task.getTitle());
-        existingTask.setCompleted(newTask.isCompleted());
-        existingTask.setCompletePomodoros(newTask.getCompletePomodoros());
-        
-        return repository.save(existingTask);
-    }
 }

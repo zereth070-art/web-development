@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Zion</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <h1>Pomodoro Zion</h1>
+    </header>
+
+    <main>
+
+        <section id="pomodoro-section">
+            <h2>Temporizador</h2>
+
+            <div id="timer">
+                25:00
+            </div>
+
+            <button id="startTimerBtn">
+                Iniciar
+            </button>
+
+            <button id="resetTimerBtn">
+                Reiniciar
+            </button>
+        </section>
+
+        <section id="task-section">
+            <h2>Tareas</h2>
+
+            <div id="task-form">
+
+                <input
+                    type="text"
+                    id="titleInput"
+                    placeholder="Nueva tarea">
+
+                <input
+                    type="number"
+                    id="estimatedPomodorosInput"
+                    placeholder="Pomodoros estimados"
+                    min="1"
+                    value="1">
+
+                <button id="createBtn">
+                    Crear tarea
+                </button>
+
+            </div>
+
+            <ul id="taskList"></ul>
+
+        </section>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Pomodoro Zion</p>
+    </footer>
+
+    <script src="script.js"></script>
+
+</body>
+</html>
