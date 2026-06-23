@@ -1,9 +1,10 @@
 package com.zion.pomodorozion;
 
 import java.util.List;
-import java.util.stream.Collectors;
-
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class TaskService {
@@ -12,47 +13,46 @@ public class TaskService {
     public TaskService(TaskRepository taskRepository) {
         this.taskRepository = taskRepository;
     }
-    
-    //----------------
-    //CREATE
-    //----------------
+
+    // ----------------
+    // CREATE
+    // ----------------
 
     public TaskDTO createTask(TaskCreateDTO dto) {
         Task task = new Task(
-            dto.getTitle(),
-        dto.getEstimatedPomodoros()
-    );
-            
-    Task saved = taskRepository.save(task);
-    return mapToDTO(saved);
+                dto.getTitle(),
+                dto.getEstimatedPomodoros());
+
+        Task saved = taskRepository.save(task);
+        return mapToDTO(saved);
     }
 
-    //----------------
-    //GET ALL
-    //----------------
+    // ----------------
+    // GET ALL
+    // ----------------
     public List<TaskDTO> getAllTasks() {
         return taskRepository.findAll()
-            .stream()
-            .map(this::mapToDTO)
-            .toList();
+                .stream()
+                .map(this::mapToDTO)
+                .toList();
     }
 
-    //----------------
-    //GET BY ID
-    //----------------
+    // ----------------
+    // GET BY ID
+    // ----------------
     public TaskDTO getTaskById(Long id) {
         Task task = taskRepository.findById(id)
-        .orElseThrow(() -> new RuntimeException("Task not found with id: " + id));
-        
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
         return mapToDTO(task);
     }
 
-    //----------------
-    //UPDATE (simple)
-    //----------------
+    // ----------------
+    // UPDATE (simple)
+    // ----------------
     public TaskDTO updateTask(Long id, TaskCreateDTO dto) {
         Task task = taskRepository.findById(id)
-        .orElseThrow(() -> new RuntimeException("Task not found with id: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         task.setTitle(dto.getTitle());
         task.setEstimatedPomodoros(dto.getEstimatedPomodoros());
@@ -61,28 +61,53 @@ public class TaskService {
         return mapToDTO(updated);
     }
 
-    //----------------
-    //DELETE
-    //----------------
+    // ----------------
+    // DELETE
+    // ----------------
     public void deleteTask(Long id) {
-        if( !taskRepository.existsById(id)){
-            throw new RuntimeException("Task not found");
+        if (!taskRepository.existsById(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-
         taskRepository.deleteById(id);
     }
 
-    //----------------
-    //Mapper
-    //----------------
+    // ----------------
+    // Mapper
+    // ----------------
     private TaskDTO mapToDTO(Task task) {
         return new TaskDTO(
-            task.getId(),
-            task.getTitle(),
-            task.getStatus(),
-             task.getEstimatedPomodoros(), 
-            task.getCompletedPomodoros()
-        );
+                task.getId(),
+                task.getTitle(),
+                task.getStatus(),
+                task.getEstimatedPomodoros(),
+                task.getCompletedPomodoros());
+    }
+
+    private void updateTaskStatus(Task task) {
+        if (task.getCompletedPomodoros() >= task.getEstimatedPomodoros()) {
+            task.setStatus(TaskStatus.COMPLETED);
+            return;
+        }
+
+        if (task.getCompletedPomodoros() > 0) {
+            task.setStatus(TaskStatus.IN_PROGRESS);
+        }
+    }
+
+    public TaskDTO completePomodoro(Long id) {
+        Task task = taskRepository.findById(id).orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task with id " + id + " not found"));
+
+        if (task.getCompletedPomodoros() >= task.getEstimatedPomodoros()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Task already completed");
+        }
+        
+        task.setCompletedPomodoros(task.getCompletedPomodoros() + 1);
+        updateTaskStatus(task);
+
+        Task updated = taskRepository.save(task);
+        return mapToDTO(updated);
+
     }
 
 }

@@ -3,9 +3,11 @@ package com.zion.pomodorozion;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,15 +40,21 @@ public class TaskController {
     }
 
     //UPDATE
-    @PostMapping("/{id}")
+    @PutMapping("/{id}")
     public ResponseEntity<TaskDTO> updateTask(@PathVariable Long id, @RequestBody TaskCreateDTO dto) {
         return ResponseEntity.ok(taskService.updateTask(id, dto));
     }
 
     //DELETE
-    @PostMapping("/{id}/delete")
+    @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTask(@PathVariable Long id) {
         taskService.deleteTask(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{id}/pomodoro")
+    public ResponseEntity<TaskDTO> completePomodoro(@PathVariable Long id) {
+        return ResponseEntity.ok(taskService.completePomodoro(id));
+    }
+    
 }

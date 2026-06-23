@@ -2,13 +2,13 @@ package com.zion.pomodorozion;
 import java.time.LocalDateTime;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 
 
 @Entity
@@ -19,7 +19,7 @@ public class Task {
     private Long id;
 
     private String title;
-
+    @Enumerated(EnumType.STRING)
     private TaskStatus status;
 
     private int estimatedPomodoros;
@@ -33,9 +33,6 @@ public class Task {
     public Task() {
     }
     
-
-   
-
 
     public Task(String title, int estimatedPomodoros) {
         this.title = title;
@@ -62,10 +59,6 @@ public class Task {
      public void setEstimatedPomodoros(int estimatedPomodoros) {
          this.estimatedPomodoros = estimatedPomodoros;
      }
-
-
-
-
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
@@ -122,9 +115,5 @@ public class Task {
         this.status = status;
     }
 
-    @Enumerated(EnumType.STRING)
-    public TaskStatus  getTaskStatus(){
-        return status;
-    }
 
 }
