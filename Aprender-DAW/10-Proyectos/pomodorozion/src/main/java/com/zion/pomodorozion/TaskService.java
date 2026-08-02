@@ -1,50 +1,113 @@
 package com.zion.pomodorozion;
 
-
 import java.util.List;
-
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
 @Service
 public class TaskService {
+    private final TaskRepository taskRepository;
 
-    private final TaskRepository repository;
-
-    public TaskService(TaskRepository repository) {
-        this.repository = repository;
+    public TaskService(TaskRepository taskRepository) {
+        this.taskRepository = taskRepository;
     }
 
-    public List<Task> getAllTasks() {
-        return repository.findAll();
+    // ----------------
+    // CREATE
+    // ----------------
 
+    public TaskDTO createTask(TaskCreateDTO dto) {
+        Task task = new Task(
+                dto.getTitle(),
+                dto.getEstimatedPomodoros());
+
+        Task saved = taskRepository.save(task);
+        return mapToDTO(saved);
+    }
+
+    // ----------------
+    // GET ALL
+    // ----------------
+    public List<TaskDTO> getAllTasks() {
+        return taskRepository.findAll()
+                .stream()
+                .map(this::mapToDTO)
+                .toList();
+    }
+
+    // ----------------
+    // GET BY ID
+    // ----------------
+    public TaskDTO getTaskById(Long id) {
+        Task task = taskRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        return mapToDTO(task);
+    }
+
+    // ----------------
+    // UPDATE (simple)
+    // ----------------
+    public TaskDTO updateTask(Long id, TaskCreateDTO dto) {
+        Task task = taskRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        task.setTitle(dto.getTitle());
+        task.setEstimatedPomodoros(dto.getEstimatedPomodoros());
+
+        Task updated = taskRepository.save(task);
+        return mapToDTO(updated);
+    }
+
+    // ----------------
+    // DELETE
+    // ----------------
+    public void deleteTask(Long id) {
+        if (!taskRepository.existsById(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        taskRepository.deleteById(id);
+    }
+
+    // ----------------
+    // Mapper
+    // ----------------
+    private TaskDTO mapToDTO(Task task) {
+        return new TaskDTO(
+                task.getId(),
+                task.getTitle(),
+                task.getStatus(),
+                task.getEstimatedPomodoros(),
+                task.getCompletedPomodoros());
+    }
+
+    private void updateTaskStatus(Task task) {
+        if (task.getCompletedPomodoros() >= task.getEstimatedPomodoros()) {
+            task.setStatus(TaskStatus.COMPLETED);
+            return;
+        }
+
+        if (task.getCompletedPomodoros() > 0) {
+            task.setStatus(TaskStatus.IN_PROGRESS);
+        }
+    }
+
+    public TaskDTO completePomodoro(Long id) {
+        Task task = taskRepository.findById(id).orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task with id " + id + " not found"));
+
+        if (task.getCompletedPomodoros() >= task.getEstimatedPomodoros()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Task already completed");
+        }
         
+        task.setCompletedPomodoros(task.getCompletedPomodoros() + 1);
+        updateTaskStatus(task);
+
+        Task updated = taskRepository.save(task);
+        return mapToDTO(updated);
+
     }
 
-    public Task createTask(Task task) {
-        if (task.getTitle() == null || task.getTitle().isBlank()) {
-        throw new IllegalArgumentException("El título es obligatorio");
-    }
-
-    return repository.save(task);
-    }
-
-    public Task getTaskById(long id) {
-        return repository.findById(id).orElseThrow(() -> new RuntimeException("Tarea no encontrada"));
-    }
-
-    public void deleteTask(long id){
-        repository.deleteById(id);
-    }
-
-    public Task updateTask(Long id, Task task) {
-        Task newTask = repository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Tarea no encontrada"));
-        
-        Task existingTask = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Tarea no encontrada"));
-        existingTask.setTitle(task.getTitle());
-        existingTask.setCompleted(newTask.isCompleted());
-        existingTask.setCompletePomodoros(newTask.getCompletePomodoros());
-        
-        return repository.save(existingTask);
-    }
 }

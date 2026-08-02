@@ -2,6 +2,7 @@ package com.zion.pomodorozion;
 
 import java.util.List;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,32 +15,46 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/tasks")
 public class TaskController {
-    
-    private TaskService taskService;
+    private final TaskService taskService;
 
-    @GetMapping
-    public List<Task> getAllTasks() {
-        return taskService.getAllTasks();
+    public TaskController(TaskService taskService) {
+        this.taskService = taskService;
     }
 
-    @GetMapping("/{id")
-    public Task getTaskById(@PathVariable Long id) {
-        return taskService.getTaskById(id);
-    }
-    
+    //CREATE
     @PostMapping
-    public Task createTask(@RequestBody Task task) {
-        return taskService.createTask(task);
-    }
-
-    @DeleteMapping("/{id}")
-    public void deleteTask(@PathVariable Long id) {
-        taskService.deleteTask(id);
+    public ResponseEntity<TaskDTO> createTask(@RequestBody TaskCreateDTO dto) {
+        return ResponseEntity.ok(taskService.createTask(dto));
     }
     
-    @PutMapping
-    public Task updateTask(@PathVariable Long id, @RequestBody Task task) {
-        return taskService.updateTask(id, task);
+    //GET ALL
+    @GetMapping
+    public ResponseEntity<List<TaskDTO>> getAllTasks() {
+        return ResponseEntity.ok(taskService.getAllTasks());
+    }
+
+    //GET BY ID
+    @GetMapping("/{id}")
+    public ResponseEntity<TaskDTO> getTaskById(@PathVariable Long id) {
+        return ResponseEntity.ok(taskService.getTaskById(id));
+    }
+
+    //UPDATE
+    @PutMapping("/{id}")
+    public ResponseEntity<TaskDTO> updateTask(@PathVariable Long id, @RequestBody TaskCreateDTO dto) {
+        return ResponseEntity.ok(taskService.updateTask(id, dto));
+    }
+
+    //DELETE
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteTask(@PathVariable Long id) {
+        taskService.deleteTask(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/pomodoro")
+    public ResponseEntity<TaskDTO> completePomodoro(@PathVariable Long id) {
+        return ResponseEntity.ok(taskService.completePomodoro(id));
     }
     
 }
