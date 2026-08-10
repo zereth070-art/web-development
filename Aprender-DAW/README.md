@@ -4,24 +4,18 @@ Directorio de estudio para aprender Desarrollo de Aplicaciones Web de forma orde
 
 ## Cómo usar esta carpeta
 
-1. Empieza por `00-Ruta-de-estudio`.
-2. Avanza módulo a módulo.
-3. Guarda tus apuntes en cada carpeta.
-4. Resuelve prácticas pequeñas antes de pasar a proyectos grandes.
-5. Usa `10-Proyectos` para construir portfolio.
+1. Avanza módulo a módulo: `01-Desarrollo-web-cliente` y `02-Desarrollo-web-servidor` forman el núcleo; después pasa a `03-Despliegue` y `04-Diseno-interfaces-web`.
+2. Guarda tus apuntes en cada carpeta.
+3. Resuelve prácticas pequeñas antes de pasar a proyectos grandes.
+4. Usa `10-Proyectos` para construir portfolio.
+5. Apóyate en `11-Recursos` y en las plantillas de `12-Plantillas`.
 
 ## Estructura
 
-- `00-Ruta-de-estudio`: planificación, checklist y método de estudio.
-- `01-Lenguajes-de-marcas`: HTML, CSS, XML, Markdown y accesibilidad básica.
-- `02-Programacion`: fundamentos de programación, JavaScript, Java o Python.
-- `03-Bases-de-datos`: SQL, modelo relacional y diseño de bases de datos.
-- `04-Entornos-de-desarrollo`: Git, GitHub, IDEs, depuración y buenas prácticas.
-- `05-Sistemas-informaticos`: terminal, redes, sistemas, permisos y fundamentos web.
-- `06-Desarrollo-web-cliente`: JavaScript moderno, DOM, fetch, SPA y frontend.
-- `07-Desarrollo-web-servidor`: backend, APIs, sesiones, autenticación y seguridad.
-- `08-Despliegue`: hosting, Docker, servidores, dominios, HTTPS y CI/CD.
-- `09-Diseno-interfaces-web`: UX/UI, responsive, diseño visual y accesibilidad.
+- `01-Desarrollo-web-cliente`: JavaScript moderno, DOM, fetch, SPAs y frontend.
+- `02-Desarrollo-web-servidor`: backend, APIs REST, sesiones, autenticación y seguridad.
+- `03-Despliegue`: hosting, Docker, servidores, dominios, HTTPS y CI/CD.
+- `04-Diseno-interfaces-web`: UX/UI, responsive, diseño visual y accesibilidad.
 - `10-Proyectos`: proyectos integradores para practicar y crear portfolio.
 - `11-Recursos`: enlaces, libros, canales, documentación y herramientas.
 - `12-Plantillas`: plantillas reutilizables para apuntes, ejercicios y proyectos.
@@ -29,4 +23,3 @@ Directorio de estudio para aprender Desarrollo de Aplicaciones Web de forma orde
 ## Objetivo final
 
 Terminar con una base sólida para crear, probar, desplegar y mantener aplicaciones web completas.
-
