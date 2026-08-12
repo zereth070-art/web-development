@@ -1,8 +1,5 @@
 package com.zion.pomodorozion;
 
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-
 public class TaskDTO {
     
     private long id;
