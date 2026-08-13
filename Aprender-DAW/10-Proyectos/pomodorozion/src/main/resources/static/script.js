@@ -1,8 +1,8 @@
-console.log("Script loaded");
 const titleInput = document.getElementById("titleInput");
 const estimatedPomodorosInput = document.getElementById(
   "estimatedPomodorosInput",
 );
+let editingTaskId = null;
 const createBtn = document.getElementById("createBtn");
 let selectedTaskId = 0;
 const API_URL = "/tasks";
@@ -24,7 +24,6 @@ estimatedPomodorosInput.addEventListener("input", validateInput);
 async function loadTasks() {
   const response = await fetch(API_URL);
   const tasks = await response.json();
-  console.log(tasks);
   const taskList = document.getElementById("taskList");
 
   taskList.innerHTML = "";
@@ -54,6 +53,9 @@ async function loadTasks() {
                 <button class="pomodoro-btn">
                    +1 Pomodoro
                 </button>
+                <button class="edit-btn">Editar</button>
+                <button class="delete-btn">Eliminar</button>
+                
                 `;
 
     li.dataset.status = task.status;
@@ -66,6 +68,10 @@ async function loadTasks() {
 
     btn.addEventListener("click", () => completePomodoro(task.id));
     selectBtn.addEventListener("click", () => selectTaskId(task.id));
+    const editBtn = li.querySelector(".edit-btn");
+    const deleteBtn = li.querySelector(".delete-btn");
+    editBtn.addEventListener("click", () => startEdit(task));
+    deleteBtn.addEventListener("click", () => deleteTask(task.id));
 
     taskList.appendChild(li);
     li.dataset.selected = task.id === selectedTaskId;
@@ -104,16 +110,22 @@ async function createTask() {
     alert("Please enter a valid number of estimated pomodoros.");
     return;
   }
-  await fetch(API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      title: title,
-      estimatedPomodoros: estimatedPomodoros,
-    }),
-  });
+  
+  if (editingTaskId !== null) {
+    await fetch(API_URL + "/" + editingTaskId, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: title, estimatedPomodoros: estimatedPomodoros }),
+    });
+    editingTaskId = null;
+    createBtn.textContent = "Crear tarea";
+  } else {
+    await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: title, estimatedPomodoros: estimatedPomodoros }),
+    });
+  }
 
   titleInput.value = "";
   estimatedPomodorosInput.value = "";
@@ -127,16 +139,26 @@ function formatTimer(totalSeconds) {
   return mins + ":" + String(secs).padStart(2, "0");
 }
 
+function phaseName(phase) {
+  const names = {
+    FOCUS: "Enfoque",
+    SHORT_BREAK: "Descanso corto",
+    LONG_BREAK: "Descanso largo",
+  };
+  return names[phase] || phase;
+}
+
 function renderTimer(state) {
   document.getElementById("timer").textContent = formatTimer(
     state.remainingSeconds,
   );
-  document.getElementById("phase").textContent = state.phase;
+  document.getElementById("phase").textContent = phaseName(state.phase);
 
   document.getElementById("startTimerBtn").disabled = state.running;
   document.getElementById("pauseTimerBtn").disabled = !state.running;
 
   selectedTaskId = state.selectedTaskId;
+  renderCycle(state.focusCountInCycle);
 }
 
 async function fetchState() {
@@ -149,6 +171,8 @@ async function refleshTimer() {
   renderTimer(state);
 
   if (state.remainingSeconds === 0 && state.running) {
+    playBeep();
+    notify(phaseName(state.phase) + " terminado");
     await fetch("/api/timer/finish", { method: "POST" });
     await refleshTimer();
   }
@@ -171,3 +195,56 @@ document
 
 refleshTimer();
 setInterval(refleshTimer, 1000);
+
+function renderCycle(focusCount) {
+  const container = document.getElementById("cycle-dots");
+  container.innerHTML = "";
+  for (let i = 0; i < 4; i++) {
+    const dot = document.createElement("span");
+    dot.className = "dot" + (i < focusCount ? " filled" : "");
+    container.appendChild(dot);
+  }
+}
+
+let audioCtx = null;
+
+function playBeep() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === "suspended") {
+    audioCtx.resume();
+  }
+  const oscillator = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  oscillator.connect(gain);
+  gain.connect(audioCtx.destination);
+  oscillator.type = "sine";
+  oscillator.frequency.value = 800;
+  oscillator.start();
+  oscillator.stop(audioCtx.currentTime + 0.5);
+}
+
+function notify(message) {
+  if ("Notification" in window && Notification.permission === "granted") {
+    new Notification("PomodoroZion", { body: message });
+  }
+  if ("Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission();
+  }
+}
+
+function startEdit(task) {
+  editingTaskId = task.id;
+  titleInput.value = task.title;
+  estimatedPomodorosInput.value = task.estimatedPomodoros;
+  createBtn.textContent = "Guardar cambios";
+  validateInput();
+}
+
+async function deleteTask(id) {
+  if (!confirm("Eliminar esta tarea?")) return;
+  await fetch(API_URL + "/" + id, { method: "DELETE" });
+  loadTasks();
+}
+
