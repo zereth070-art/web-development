@@ -148,7 +148,6 @@ public class TimerService {
     private Timer getTimer() {
         return timerRepository.findById(1L).orElseGet(() -> {
             Timer timer = new Timer();
-            timer.setId(1L);
             timer.setPhase(TimerPhase.FOCUS);
             timer.setRemainingSecondsAtStart(fullDuration(TimerPhase.FOCUS));
             timer.setRunning(false);

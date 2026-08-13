@@ -1,8 +1,10 @@
 console.log("Script loaded");
 const titleInput = document.getElementById("titleInput");
-const estimatedPomodorosInput = document.getElementById("estimatedPomodorosInput");
+const estimatedPomodorosInput = document.getElementById(
+  "estimatedPomodorosInput",
+);
 const createBtn = document.getElementById("createBtn");
-
+let selectedTaskId = 0;
 const API_URL = "/tasks";
 
 function validateInput() {
@@ -29,14 +31,18 @@ async function loadTasks() {
 
   tasks.forEach((task) => {
     const li = document.createElement("li");
-    let statusTexto; 
-    if (task.status === 'PENDING') statusTexto = 'Pendiente';
-    else if (task.status === 'IN_PROGRESS') statusTexto = 'En progreso';
-    else statusTexto  = 'Completada';
+    let statusTexto;
+    if (task.status === "PENDING") statusTexto = "Pendiente";
+    else if (task.status === "IN_PROGRESS") statusTexto = "En progreso";
+    else statusTexto = "Completada";
 
     li.innerHTML = `
                 <div class ="task-title">${task.title}</div>
-
+                
+                <button class="select-btn">
+                   ${task.id === selectedTaskId ? "✓ Seleccionada" : "Seleccionar"}
+                </button>
+                
                 <div class="task-progress">
                   ${task.completedPomodoros} / ${task.estimatedPomodoros} pomodoros
                 </div>
@@ -53,14 +59,16 @@ async function loadTasks() {
     li.dataset.status = task.status;
 
     const btn = li.querySelector(".pomodoro-btn");
-
+    const selectBtn = li.querySelector(".select-btn");
     if (task.status === "COMPLETED") {
       btn.disabled = true;
     }
 
     btn.addEventListener("click", () => completePomodoro(task.id));
+    selectBtn.addEventListener("click", () => selectTaskId(task.id));
 
     taskList.appendChild(li);
+    li.dataset.selected = task.id === selectedTaskId;
   });
 }
 
@@ -69,6 +77,12 @@ async function completePomodoro(id) {
     method: "POST",
   });
 
+  loadTasks();
+}
+
+async function selectTaskId(id) {
+  await fetch("/api/timer/task/" + id, { method: "POST" });
+  await refleshTimer();
   loadTasks();
 }
 
@@ -104,40 +118,56 @@ async function createTask() {
   titleInput.value = "";
   estimatedPomodorosInput.value = "";
   loadTasks();
-
 }
-  loadTasks();
+loadTasks();
 
-  let segundos = 25 * 60;
-  let intervalo = null;
-  let corriendo = false;
+function formatTimer(totalSeconds) {
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return mins + ":" + String(secs).padStart(2, "0");
+}
 
-  function actualizarDisplay() {
-    const mins = Math.floor(segundos / 60);
-    const secs = segundos % 60;
-    document.getElementById("timer").textContent =
-    `${mins}:${secs.toString().padStart(2, "0")}`;
+function renderTimer(state) {
+  document.getElementById("timer").textContent = formatTimer(
+    state.remainingSeconds,
+  );
+  document.getElementById("phase").textContent = state.phase;
 
+  document.getElementById("startTimerBtn").disabled = state.running;
+  document.getElementById("pauseTimerBtn").disabled = !state.running;
+
+  selectedTaskId = state.selectedTaskId;
+}
+
+async function fetchState() {
+  const response = await fetch("/api/timer");
+  return await response.json();
+}
+
+async function refleshTimer() {
+  const state = await fetchState();
+  renderTimer(state);
+
+  if (state.remainingSeconds === 0 && state.running) {
+    await fetch("/api/timer/finish", { method: "POST" });
+    await refleshTimer();
   }
+}
 
-  document.getElementById("startTimerBtn").addEventListener("click", () => {
-    if(corriendo) return;
-    corriendo = true;
+async function doAction(action) {
+  await fetch("/api/timer/" + action, { method: "POST" });
+  await refleshTimer();
+}
 
-    intervalo = setInterval(() => {
-      segundos--;
-      actualizarDisplay();
+document
+  .getElementById("startTimerBtn")
+  .addEventListener("click", () => doAction("start"));
+document
+  .getElementById("resetTimerBtn")
+  .addEventListener("click", () => doAction("reset"));
+document
+  .getElementById("pauseTimerBtn")
+  .addEventListener("click", () => doAction("pause"));
 
-      if (segundos === 0) {
-        clearInterval(intervalo);
-        corriendo = false;
-      }
-    }, 1000)
-  });
-
-  document.getElementById("resetTimerBtn").addEventListener("click", () => {
-    clearInterval(intervalo);
-    corriendo = false;
-    segundos = 25 * 60;
-    actualizarDisplay();
-  });
+refleshTimer();
+setInterval(refleshTimer, 1000);

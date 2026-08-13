@@ -161,3 +161,9 @@ footer {
   font-weight: 400;
   font-style: normal;
 }
+
+
+li[data-selected="true"]{
+  border: 2px solid var(--verde);
+  background-color: var(--verde-claro);
+}
