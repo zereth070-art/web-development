@@ -34,4 +34,3 @@ Construir una aplicación web completa con frontend, backend, base de datos, aut
 - Correcto uso de base de datos.
 - Despliegue funcional.
 - Documentación clara.
-
