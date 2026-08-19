@@ -88,7 +88,6 @@ async function completePomodoro(id) {
 
 async function selectTaskId(id) {
   await fetch("/api/timer/task/" + id, { method: "POST" });
-  await refleshTimer();
   loadTasks();
 }
 
@@ -161,26 +160,8 @@ function renderTimer(state) {
   renderCycle(state.focusCountInCycle);
 }
 
-async function fetchState() {
-  const response = await fetch("/api/timer");
-  return await response.json();
-}
-
-async function refleshTimer() {
-  const state = await fetchState();
-  renderTimer(state);
-
-  if (state.remainingSeconds === 0 && state.running) {
-    playBeep();
-    notify(phaseName(state.phase) + " terminado");
-    await fetch("/api/timer/finish", { method: "POST" });
-    await refleshTimer();
-  }
-}
-
 async function doAction(action) {
   await fetch("/api/timer/" + action, { method: "POST" });
-  await refleshTimer();
 }
 
 document
@@ -193,8 +174,68 @@ document
   .getElementById("pauseTimerBtn")
   .addEventListener("click", () => doAction("pause"));
 
-refleshTimer();
-setInterval(refleshTimer, 1000);
+// --- WebSocket: el servidor empuja el estado cada segundo ---
+let ws = null;
+let wsConnected = false;
+let finishing = false;
+
+function connectWs() {
+  const protocol = location.protocol === "https:" ? "wss" : "ws";
+  ws = new WebSocket(protocol + "://" + location.host + "/ws");
+
+  ws.onopen = () => {
+    wsConnected = true;
+  };
+
+  ws.onmessage = (event) => {
+    applyState(JSON.parse(event.data));
+  };
+
+  ws.onclose = () => {
+    wsConnected = false;
+    setTimeout(connectWs, 3000);
+  };
+
+  ws.onerror = () => {
+    ws.close();
+  };
+}
+
+function applyState(state) {
+  const previousSelected = selectedTaskId;
+  renderTimer(state);
+
+  if (previousSelected !== state.selectedTaskId) {
+    loadTasks();
+  }
+
+  if (state.remainingSeconds === 0 && state.running && !finishing) {
+    finishing = true;
+    playBeep();
+    notify(phaseName(state.phase) + " terminado");
+    fetch("/api/timer/finish", { method: "POST" }).then(
+      () => {
+        finishing = false;
+        loadSessions();
+      },
+      () => (finishing = false),
+    );
+  }
+}
+
+// Plan B: si el WebSocket falla, volvemos al polling clásico
+async function poll() {
+  if (wsConnected) return;
+  try {
+    const response = await fetch("/api/timer");
+    applyState(await response.json());
+  } catch (e) {
+    // sin conexión con el servidor: no hacer nada
+  }
+}
+
+connectWs();
+setInterval(poll, 1000);
 
 function renderCycle(focusCount) {
   const container = document.getElementById("cycle-dots");
@@ -247,4 +288,73 @@ async function deleteTask(id) {
   await fetch(API_URL + "/" + id, { method: "DELETE" });
   loadTasks();
 }
+
+// --- Session History ---
+
+async function loadTodayStats() {
+  try {
+    const response = await fetch("/api/sessions/today");
+    const stats = await response.json();
+    document.getElementById("todayFocusCount").textContent = stats.focusCount;
+    document.getElementById("todayFocusTime").textContent = formatDuration(stats.focusSeconds);
+    document.getElementById("todayBreakCount").textContent = stats.breakCount;
+    document.getElementById("todayBreakTime").textContent = formatDuration(stats.breakSeconds);
+  } catch (e) {
+    // sin conexión
+  }
+}
+
+async function loadRecentSessions() {
+  try {
+    const response = await fetch("/api/sessions/recent");
+    const sessions = await response.json();
+    renderSessionList(sessions);
+  } catch (e) {
+    // sin conexión
+  }
+}
+
+function renderSessionList(sessions) {
+  const list = document.getElementById("sessionList");
+  list.innerHTML = "";
+
+  if (sessions.length === 0) {
+    list.innerHTML = "<li class='empty'>No hay sesiones registradas</li>";
+    return;
+  }
+
+  sessions.forEach((session) => {
+    const li = document.createElement("li");
+    li.className = "session-item" + (session.phase !== "FOCUS" ? " break-session" : "");
+
+    const phaseLabel = phaseName(session.phase);
+    const time = new Date(session.completedAt).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+    const taskInfo = session.taskTitle ? session.taskTitle : "Sin tarea";
+    const duration = formatDuration(session.durationSeconds);
+
+    li.innerHTML = `
+      <div class="session-phase">${phaseLabel}</div>
+      <div class="session-task">${taskInfo}</div>
+      <div class="session-meta">${duration} · ${time}</div>
+    `;
+
+    list.appendChild(li);
+  });
+}
+
+function formatDuration(totalSeconds) {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  if (hours > 0) {
+    return hours + "h " + minutes + "m";
+  }
+  return minutes + "m";
+}
+
+function loadSessions() {
+  loadTodayStats();
+  loadRecentSessions();
+}
+
+loadSessions();
 

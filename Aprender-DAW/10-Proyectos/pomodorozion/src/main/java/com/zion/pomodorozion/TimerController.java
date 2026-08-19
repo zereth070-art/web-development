@@ -12,9 +12,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class TimerController {
 
     private final TimerService timerService;
+    private final TimerBroadcaster broadcaster;
 
-    public TimerController(TimerService timerService) {
+    public TimerController(TimerService timerService, TimerBroadcaster broadcaster) {
         this.timerService = timerService;
+        this.broadcaster = broadcaster;
     }
 
     //GET STATE
@@ -26,30 +28,40 @@ public class TimerController {
     //START
     @PostMapping("/start")
     public ResponseEntity<TimerState> start() {
-        return ResponseEntity.ok(timerService.start());
+        TimerState state = timerService.start();
+        broadcaster.broadcast(state);
+        return ResponseEntity.ok(state);
     }
 
     //PAUSE
     @PostMapping("/pause")
     public ResponseEntity<TimerState> pause() {
-        return ResponseEntity.ok(timerService.pause());
+        TimerState state = timerService.pause();
+        broadcaster.broadcast(state);
+        return ResponseEntity.ok(state);
     }
 
     //RESET
     @PostMapping("/reset")
     public ResponseEntity<TimerState> reset() {
-        return ResponseEntity.ok(timerService.reset());
+        TimerState state = timerService.reset();
+        broadcaster.broadcast(state);
+        return ResponseEntity.ok(state);
     }
 
     //FINISH (transición de fase)
     @PostMapping("/finish")
     public ResponseEntity<TimerState> finish() {
-        return ResponseEntity.ok(timerService.finish());
+        TimerState state = timerService.finish();
+        broadcaster.broadcast(state);
+        return ResponseEntity.ok(state);
     }
 
     //SELECT TASK (o deseleccionar con taskId 0)
     @PostMapping("/task/{taskId}")
     public ResponseEntity<TimerState> selectTask(@PathVariable Long taskId) {
-        return ResponseEntity.ok(timerService.selectTask(taskId));
+        TimerState state = timerService.selectTask(taskId);
+        broadcaster.broadcast(state);
+        return ResponseEntity.ok(state);
     }
 }

@@ -5,12 +5,12 @@ import java.time.Instant;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
 @Service
 public class TimerService {
 
     private final TimerRepository timerRepository;
     private final TaskService taskService;
+    private final PomodoroSessionService sessionService;
 
     @Value("${pomodoro.duration:25}")
     private int focusMinutes;
@@ -21,9 +21,10 @@ public class TimerService {
     @Value("${pomodoro.long-break:15}")
     private int longBreakMinutes;
 
-    public TimerService(TimerRepository timerRepository, TaskService taskService) {
+    public TimerService(TimerRepository timerRepository, TaskService taskService, PomodoroSessionService sessionService) {
         this.timerRepository = timerRepository;
         this.taskService = taskService;
+        this.sessionService =  sessionService;
     }
 
     // ----------------
@@ -89,7 +90,10 @@ public class TimerService {
     public TimerState finish() {
         Timer timer = getTimer();
 
-        if (timer.getPhase() == TimerPhase.FOCUS) {
+        TimerPhase completedPhase = timer.getPhase();
+        long duration = secondsRemaining(timer);
+
+        if (completedPhase == TimerPhase.FOCUS) {
             timer.setFocusCountInCycle(timer.getFocusCountInCycle() + 1);
 
             completePomodoroIfSelected(timer);
@@ -97,12 +101,18 @@ public class TimerService {
             boolean longBreak = timer.getFocusCountInCycle() % 4 == 0;
             timer.setPhase(longBreak ? TimerPhase.LONG_BREAK : TimerPhase.SHORT_BREAK);
         } else {
-            boolean wasLongBreak = timer.getPhase() == TimerPhase.LONG_BREAK;
+            boolean wasLongBreak = completedPhase == TimerPhase.LONG_BREAK;
             timer.setPhase(TimerPhase.FOCUS);
             if (wasLongBreak) {
                 timer.setFocusCountInCycle(0);
             }
         }
+
+        sessionService.recordSession(
+            completedPhase,
+            timer.getSelectedTaskId(),
+            timer.getStartedAt(),
+            duration);
 
         timer.setRemainingSecondsAtStart(fullDuration(timer.getPhase()));
         timer.setStartedAt(null);
