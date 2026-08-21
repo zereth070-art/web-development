@@ -358,3 +358,28 @@ function loadSessions() {
 
 loadSessions();
 
+
+async function login(username, password) {
+  const res = await fetch("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+
+  if (!res.ok) {
+    console.error("Login incorrecto");
+    return null;
+  }
+  return res.json();
+}
+
+// Al cargar la pagina: ¿hay sesion?
+(async () => {
+  const res = await fetch("/api/auth/me");
+  if (res.status === 401) {
+    // TODO: mostrar formulario de login/registro
+  } else {
+    const user = await res.json();
+    // cargar tareas, timer, etc
+  }
+})();
