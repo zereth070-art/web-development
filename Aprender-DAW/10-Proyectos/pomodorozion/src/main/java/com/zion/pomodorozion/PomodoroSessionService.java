@@ -18,8 +18,9 @@ public class PomodoroSessionService {
         this.service = service;
     }
 
-    public void recordSession(TimerPhase phase, long taskId, Instant startedAt, long durationSeconds) {
+    public void recordSession(Long userId, TimerPhase phase, long taskId, Instant startedAt, long durationSeconds) {
         PomodoroSession session = new PomodoroSession();
+        session.setUserId(userId);
         session.setPhase(phase);
         session.setStartedAt(startedAt);
         session.setDurationSeconds(durationSeconds);
@@ -27,7 +28,7 @@ public class PomodoroSessionService {
         if (taskId > 0) {
             session.setTaskId(taskId);
             try {
-                TaskDTO task = service.getTaskById(taskId);
+                TaskDTO task = service.getTaskById(taskId, userId);
                 session.setTaskTitle(task.getTitle());
             } catch (Exception e) {
             }
@@ -36,24 +37,22 @@ public class PomodoroSessionService {
         sessionRepository.save(session); // ← FUERA del if
     }
 
-    public List<PomodoroSessionDTO> getRecentSessions() {
-        return sessionRepository.findTop20ByOrderByCompletedAtDesc()
+    public List<PomodoroSessionDTO> getRecentSessions(Long userId) {
+        return sessionRepository.findTop20ByUserIdOrderByCompletedAtDesc(userId)
         .stream()
         .map(this::mapToDTO)
         .toList();
     }
 
 
-    public SessionsStatsDTO getTodayStats() {
+    public SessionsStatsDTO getTodayStats(Long userId) {
         Instant startOfDay = LocalDate.now()
         .atStartOfDay(ZoneId.systemDefault())
         .toInstant();
 
-        long focusSeconds = safeSum(sessionRepository.sumDurationSecondsByCompletedAtAfter(startOfDay));
+        long focusSeconds = safeSum(sessionRepository.sumDurationSecondsByCompletedAtAfter(startOfDay, userId));
 
-        long totalSessions = sessionRepository.countByCompletedAtAfter(startOfDay);
-
-        List<PomodoroSession> todaySessions = sessionRepository.findTop20ByOrderByCompletedAtDesc()
+        List<PomodoroSession> todaySessions = sessionRepository.findTop20ByUserIdOrderByCompletedAtDesc(userId)
         .stream()
         .filter(s -> s.getCompletedAt().isAfter(startOfDay))
         .toList();

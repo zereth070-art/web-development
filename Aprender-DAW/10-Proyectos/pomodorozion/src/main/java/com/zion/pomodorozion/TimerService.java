@@ -30,15 +30,15 @@ public class TimerService {
     // ----------------
     // GET STATE
     // ----------------
-    public TimerState getState() {
-        return toState(getTimer());
+    public TimerState getState(Long userId) {
+        return toState(getTimer(userId));
     }
 
     // ----------------
     // START
     // ----------------
-    public TimerState start() {
-        Timer timer = getTimer();
+    public TimerState start(Long userId) {
+        Timer timer = getTimer(userId);
 
         if (!timer.isRunning()) {
             long remaining = secondsRemaining(timer);
@@ -57,8 +57,8 @@ public class TimerService {
     // ----------------
     // PAUSE
     // ----------------
-    public TimerState pause() {
-        Timer timer = getTimer();
+    public TimerState pause(Long userId) {
+        Timer timer = getTimer(userId);
 
         if (timer.isRunning()) {
             timer.setRemainingSecondsAtStart(secondsRemaining(timer));
@@ -73,8 +73,8 @@ public class TimerService {
     // ----------------
     // RESET
     // ----------------
-    public TimerState reset() {
-        Timer timer = getTimer();
+    public TimerState reset(Long userId) {
+        Timer timer = getTimer(userId);
 
         timer.setRemainingSecondsAtStart(fullDuration(timer.getPhase()));
         timer.setStartedAt(null);
@@ -87,8 +87,8 @@ public class TimerService {
     // ----------------
     // FINISH (transition)
     // ----------------
-    public TimerState finish() {
-        Timer timer = getTimer();
+    public TimerState finish(Long userId) {
+        Timer timer = getTimer(userId);
 
         TimerPhase completedPhase = timer.getPhase();
         long duration = secondsRemaining(timer);
@@ -109,6 +109,7 @@ public class TimerService {
         }
 
         sessionService.recordSession(
+            userId,
             completedPhase,
             timer.getSelectedTaskId(),
             timer.getStartedAt(),
@@ -125,13 +126,13 @@ public class TimerService {
     // ----------------
     // SELECT TASK
     // ----------------
-    public TimerState selectTask(Long taskId) {
-        Timer timer = getTimer();
+    public TimerState selectTask(Long taskId, Long userId) {
+        Timer timer = getTimer(userId);
 
         if (taskId == null || taskId <= 0) {
             timer.setSelectedTaskId(0);
         } else {
-            taskService.getTaskById(taskId);
+            taskService.getTaskById(taskId, userId);
             timer.setSelectedTaskId(taskId);
         }
         timerRepository.save(timer);
@@ -149,15 +150,16 @@ public class TimerService {
             return;
         }
 
-        TaskDTO task = taskService.getTaskById(taskId);
+        TaskDTO task = taskService.getTaskById(taskId, timer.getUserId());
         if (task.getStatus() != TaskStatus.COMPLETED) {
-            taskService.completePomodoro(taskId);
+            taskService.completePomodoro(taskId, timer.getUserId());
         }
     }
 
-    private Timer getTimer() {
-        return timerRepository.findById(1L).orElseGet(() -> {
+    private Timer getTimer(Long userId) {
+        return timerRepository.findByUserId(userId).orElseGet(() -> {
             Timer timer = new Timer();
+            timer.setUserId(userId);
             timer.setPhase(TimerPhase.FOCUS);
             timer.setRemainingSecondsAtStart(fullDuration(TimerPhase.FOCUS));
             timer.setRunning(false);

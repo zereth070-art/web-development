@@ -13,55 +13,63 @@ public class TimerController {
 
     private final TimerService timerService;
     private final TimerBroadcaster broadcaster;
+    private final AuthenticatedUserService authenticatedUserService;
 
-    public TimerController(TimerService timerService, TimerBroadcaster broadcaster) {
+    public TimerController(TimerService timerService, TimerBroadcaster broadcaster,
+            AuthenticatedUserService authenticatedUserService) {
         this.timerService = timerService;
         this.broadcaster = broadcaster;
+        this.authenticatedUserService = authenticatedUserService;
     }
 
     //GET STATE
     @GetMapping
     public ResponseEntity<TimerState> getState() {
-        return ResponseEntity.ok(timerService.getState());
+        return ResponseEntity.ok(timerService.getState(authenticatedUserService.getUserId()));
     }
 
     //START
     @PostMapping("/start")
     public ResponseEntity<TimerState> start() {
-        TimerState state = timerService.start();
-        broadcaster.broadcast(state);
+        Long userId = authenticatedUserService.getUserId();
+        TimerState state = timerService.start(userId);
+        broadcaster.broadcastToUser(userId, state);
         return ResponseEntity.ok(state);
     }
 
     //PAUSE
     @PostMapping("/pause")
     public ResponseEntity<TimerState> pause() {
-        TimerState state = timerService.pause();
-        broadcaster.broadcast(state);
+        Long userId = authenticatedUserService.getUserId();
+        TimerState state = timerService.pause(userId);
+        broadcaster.broadcastToUser(userId, state);
         return ResponseEntity.ok(state);
     }
 
     //RESET
     @PostMapping("/reset")
     public ResponseEntity<TimerState> reset() {
-        TimerState state = timerService.reset();
-        broadcaster.broadcast(state);
+        Long userId = authenticatedUserService.getUserId();
+        TimerState state = timerService.reset(userId);
+        broadcaster.broadcastToUser(userId, state);
         return ResponseEntity.ok(state);
     }
 
     //FINISH (transición de fase)
     @PostMapping("/finish")
     public ResponseEntity<TimerState> finish() {
-        TimerState state = timerService.finish();
-        broadcaster.broadcast(state);
+        Long userId = authenticatedUserService.getUserId();
+        TimerState state = timerService.finish(userId);
+        broadcaster.broadcastToUser(userId, state);
         return ResponseEntity.ok(state);
     }
 
     //SELECT TASK (o deseleccionar con taskId 0)
     @PostMapping("/task/{taskId}")
     public ResponseEntity<TimerState> selectTask(@PathVariable Long taskId) {
-        TimerState state = timerService.selectTask(taskId);
-        broadcaster.broadcast(state);
+        Long userId = authenticatedUserService.getUserId();
+        TimerState state = timerService.selectTask(taskId, userId);
+        broadcaster.broadcastToUser(userId, state);
         return ResponseEntity.ok(state);
     }
 }

@@ -12,18 +12,21 @@ import org.springframework.web.bind.annotation.RestController;
 public class PomodoroSessionsController {
     
     private final PomodoroSessionService sessionService;
+    private final AuthenticatedUserService authenticatedUserService;
 
-    public PomodoroSessionsController(PomodoroSessionService sessionService) {
+    public PomodoroSessionsController(PomodoroSessionService sessionService,
+            AuthenticatedUserService authenticatedUserService) {
         this.sessionService = sessionService;
+        this.authenticatedUserService = authenticatedUserService;
     }
 
     @GetMapping("/recent")
     public ResponseEntity<List<PomodoroSessionDTO>> getRecentSessions(){
-        return ResponseEntity.ok(sessionService.getRecentSessions());
+        return ResponseEntity.ok(sessionService.getRecentSessions(authenticatedUserService.getUserId()));
     }
 
     @GetMapping("/today")
     public ResponseEntity<SessionsStatsDTO> getTodayStats() {
-        return ResponseEntity.ok(sessionService.getTodayStats());
+        return ResponseEntity.ok(sessionService.getTodayStats(authenticatedUserService.getUserId()));
     }
 }

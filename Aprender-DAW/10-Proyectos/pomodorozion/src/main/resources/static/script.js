@@ -130,7 +130,6 @@ async function createTask() {
   estimatedPomodorosInput.value = "";
   loadTasks();
 }
-loadTasks();
 
 function formatTimer(totalSeconds) {
   const mins = Math.floor(totalSeconds / 60);
@@ -234,8 +233,14 @@ async function poll() {
   }
 }
 
-connectWs();
-setInterval(poll, 1000);
+let appStarted = false;
+
+function startApp() {
+  if (appStarted) return;
+  appStarted = true;
+  connectWs();
+  setInterval(poll, 1000);
+}
 
 function renderCycle(focusCount) {
   const container = document.getElementById("cycle-dots");
@@ -356,10 +361,51 @@ function loadSessions() {
   loadRecentSessions();
 }
 
-loadSessions();
+// --- Autenticación ---
+const authOverlay = document.getElementById("auth-overlay");
+const mainContent = document.querySelector("main");
+const authError = document.getElementById("auth-error");
+const loginForm = document.getElementById("login-form");
+const registerForm = document.getElementById("register-form");
 
+function showAuth() {
+  authOverlay.hidden = false;
+  mainContent.hidden = true;
+}
 
-async function login(username, password) {
+function hideAuth(username) {
+  authOverlay.hidden = true;
+  mainContent.hidden = false;
+  document.getElementById("user-name").textContent = username;
+  document.getElementById("logoutBtn").hidden = false;
+}
+
+function showAuthError(message) {
+  authError.textContent = message;
+  authError.hidden = false;
+}
+
+function switchTab(tab) {
+  const isLogin = tab === "login";
+  loginForm.hidden = !isLogin;
+  registerForm.hidden = isLogin;
+  document.getElementById("tab-login").classList.toggle("active", isLogin);
+  document.getElementById("tab-register").classList.toggle("active", !isLogin);
+  authError.hidden = true;
+}
+
+document
+  .getElementById("tab-login")
+  .addEventListener("click", () => switchTab("login"));
+document
+  .getElementById("tab-register")
+  .addEventListener("click", () => switchTab("register"));
+
+loginForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const username = document.getElementById("login-username").value.trim();
+  const password = document.getElementById("login-password").value;
+
   const res = await fetch("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -367,19 +413,73 @@ async function login(username, password) {
   });
 
   if (!res.ok) {
-    console.error("Login incorrecto");
-    return null;
+    showAuthError("Usuario o contraseña incorrectos");
+    return;
   }
-  return res.json();
-}
+
+  const user = await res.json();
+  loginForm.reset();
+  hideAuth(user.username);
+  startApp();
+});
+
+registerForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const username = document.getElementById("register-username").value.trim();
+  const password = document.getElementById("register-password").value;
+
+  const res = await fetch("/api/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+
+  if (!res.ok) {
+    let msg = "No se pudo crear la cuenta";
+    try {
+      const err = await res.json();
+      if (err.errors) msg = Object.values(err.errors).join(". ");
+    } catch (_) {}
+    showAuthError(msg);
+    return;
+  }
+
+  const loginRes = await fetch("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+
+  if (!loginRes.ok) {
+    registerForm.reset();
+    switchTab("login");
+    showAuthError("Cuenta creada. Inicia sesión.");
+    return;
+  }
+
+  const user = await loginRes.json();
+  registerForm.reset();
+  hideAuth(user.username);
+  startApp();
+});
+
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+  await fetch("/api/auth/logout", { method: "POST" });
+  location.reload();
+});
 
 // Al cargar la pagina: ¿hay sesion?
 (async () => {
-  const res = await fetch("/api/auth/me");
-  if (res.status === 401) {
-    // TODO: mostrar formulario de login/registro
-  } else {
-    const user = await res.json();
-    // cargar tareas, timer, etc
+  try {
+    const res = await fetch("/api/auth/me");
+    if (res.ok) {
+      const user = await res.json();
+      hideAuth(user.username);
+      startApp();
+    } else {
+      showAuth();
+    }
+  } catch (e) {
+    showAuth();
   }
 })();
