@@ -15,6 +15,8 @@ public class Timer {
    @GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)
    private Long id; 
 
+   private Long userId;
+
    @Enumerated(EnumType.STRING)
    private TimerPhase phase = TimerPhase.FOCUS;
    private boolean running;
@@ -30,6 +32,13 @@ public class Timer {
    }
    public void setId(Long id) {
       this.id = id;
+   }
+
+   public Long getUserId() {
+      return userId;
+   }
+   public void setUserId(Long userId) {
+      this.userId = userId;
    }
 
    public boolean isRunning() {

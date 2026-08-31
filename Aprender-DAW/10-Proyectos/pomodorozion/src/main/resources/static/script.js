@@ -1,8 +1,10 @@
-console.log("Script loaded");
 const titleInput = document.getElementById("titleInput");
-const estimatedPomodorosInput = document.getElementById("estimatedPomodorosInput");
+const estimatedPomodorosInput = document.getElementById(
+  "estimatedPomodorosInput",
+);
+let editingTaskId = null;
 const createBtn = document.getElementById("createBtn");
-
+let selectedTaskId = 0;
 const API_URL = "/tasks";
 
 function validateInput() {
@@ -22,21 +24,24 @@ estimatedPomodorosInput.addEventListener("input", validateInput);
 async function loadTasks() {
   const response = await fetch(API_URL);
   const tasks = await response.json();
-  console.log(tasks);
   const taskList = document.getElementById("taskList");
 
   taskList.innerHTML = "";
 
   tasks.forEach((task) => {
     const li = document.createElement("li");
-    let statusTexto; 
-    if (task.status === 'PENDING') statusTexto = 'Pendiente';
-    else if (task.status === 'IN_PROGRESS') statusTexto = 'En progreso';
-    else statusTexto  = 'Completada';
+    let statusTexto;
+    if (task.status === "PENDING") statusTexto = "Pendiente";
+    else if (task.status === "IN_PROGRESS") statusTexto = "En progreso";
+    else statusTexto = "Completada";
 
     li.innerHTML = `
                 <div class ="task-title">${task.title}</div>
-
+                
+                <button class="select-btn">
+                   ${task.id === selectedTaskId ? "✓ Seleccionada" : "Seleccionar"}
+                </button>
+                
                 <div class="task-progress">
                   ${task.completedPomodoros} / ${task.estimatedPomodoros} pomodoros
                 </div>
@@ -48,19 +53,28 @@ async function loadTasks() {
                 <button class="pomodoro-btn">
                    +1 Pomodoro
                 </button>
+                <button class="edit-btn">Editar</button>
+                <button class="delete-btn">Eliminar</button>
+                
                 `;
 
     li.dataset.status = task.status;
 
     const btn = li.querySelector(".pomodoro-btn");
-
+    const selectBtn = li.querySelector(".select-btn");
     if (task.status === "COMPLETED") {
       btn.disabled = true;
     }
 
     btn.addEventListener("click", () => completePomodoro(task.id));
+    selectBtn.addEventListener("click", () => selectTaskId(task.id));
+    const editBtn = li.querySelector(".edit-btn");
+    const deleteBtn = li.querySelector(".delete-btn");
+    editBtn.addEventListener("click", () => startEdit(task));
+    deleteBtn.addEventListener("click", () => deleteTask(task.id));
 
     taskList.appendChild(li);
+    li.dataset.selected = task.id === selectedTaskId;
   });
 }
 
@@ -69,6 +83,11 @@ async function completePomodoro(id) {
     method: "POST",
   });
 
+  loadTasks();
+}
+
+async function selectTaskId(id) {
+  await fetch("/api/timer/task/" + id, { method: "POST" });
   loadTasks();
 }
 
@@ -90,54 +109,377 @@ async function createTask() {
     alert("Please enter a valid number of estimated pomodoros.");
     return;
   }
-  await fetch(API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      title: title,
-      estimatedPomodoros: estimatedPomodoros,
-    }),
-  });
+  
+  if (editingTaskId !== null) {
+    await fetch(API_URL + "/" + editingTaskId, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: title, estimatedPomodoros: estimatedPomodoros }),
+    });
+    editingTaskId = null;
+    createBtn.textContent = "Crear tarea";
+  } else {
+    await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: title, estimatedPomodoros: estimatedPomodoros }),
+    });
+  }
 
   titleInput.value = "";
   estimatedPomodorosInput.value = "";
   loadTasks();
-
 }
-  loadTasks();
 
-  let segundos = 25 * 60;
-  let intervalo = null;
-  let corriendo = false;
+function formatTimer(totalSeconds) {
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return mins + ":" + String(secs).padStart(2, "0");
+}
 
-  function actualizarDisplay() {
-    const mins = Math.floor(segundos / 60);
-    const secs = segundos % 60;
-    document.getElementById("timer").textContent =
-    `${mins}:${secs.toString().padStart(2, "0")}`;
+function phaseName(phase) {
+  const names = {
+    FOCUS: "Enfoque",
+    SHORT_BREAK: "Descanso corto",
+    LONG_BREAK: "Descanso largo",
+  };
+  return names[phase] || phase;
+}
 
+function renderTimer(state) {
+  document.getElementById("timer").textContent = formatTimer(
+    state.remainingSeconds,
+  );
+  document.getElementById("phase").textContent = phaseName(state.phase);
+
+  document.getElementById("startTimerBtn").disabled = state.running;
+  document.getElementById("pauseTimerBtn").disabled = !state.running;
+
+  selectedTaskId = state.selectedTaskId;
+  renderCycle(state.focusCountInCycle);
+}
+
+async function doAction(action) {
+  await fetch("/api/timer/" + action, { method: "POST" });
+}
+
+document
+  .getElementById("startTimerBtn")
+  .addEventListener("click", () => doAction("start"));
+document
+  .getElementById("resetTimerBtn")
+  .addEventListener("click", () => doAction("reset"));
+document
+  .getElementById("pauseTimerBtn")
+  .addEventListener("click", () => doAction("pause"));
+
+// --- WebSocket: el servidor empuja el estado cada segundo ---
+let ws = null;
+let wsConnected = false;
+let finishing = false;
+
+function connectWs() {
+  const protocol = location.protocol === "https:" ? "wss" : "ws";
+  ws = new WebSocket(protocol + "://" + location.host + "/ws");
+
+  ws.onopen = () => {
+    wsConnected = true;
+  };
+
+  ws.onmessage = (event) => {
+    applyState(JSON.parse(event.data));
+  };
+
+  ws.onclose = () => {
+    wsConnected = false;
+    setTimeout(connectWs, 3000);
+  };
+
+  ws.onerror = () => {
+    ws.close();
+  };
+}
+
+function applyState(state) {
+  const previousSelected = selectedTaskId;
+  renderTimer(state);
+
+  if (previousSelected !== state.selectedTaskId) {
+    loadTasks();
   }
 
-  document.getElementById("startTimerBtn").addEventListener("click", () => {
-    if(corriendo) return;
-    corriendo = true;
+  if (state.remainingSeconds === 0 && state.running && !finishing) {
+    finishing = true;
+    playBeep();
+    notify(phaseName(state.phase) + " terminado");
+    fetch("/api/timer/finish", { method: "POST" }).then(
+      () => {
+        finishing = false;
+        loadSessions();
+      },
+      () => (finishing = false),
+    );
+  }
+}
 
-    intervalo = setInterval(() => {
-      segundos--;
-      actualizarDisplay();
+// Plan B: si el WebSocket falla, volvemos al polling clásico
+async function poll() {
+  if (wsConnected) return;
+  try {
+    const response = await fetch("/api/timer");
+    applyState(await response.json());
+  } catch (e) {
+    // sin conexión con el servidor: no hacer nada
+  }
+}
 
-      if (segundos === 0) {
-        clearInterval(intervalo);
-        corriendo = false;
-      }
-    }, 1000)
+let appStarted = false;
+
+function startApp() {
+  if (appStarted) return;
+  appStarted = true;
+  connectWs();
+  setInterval(poll, 1000);
+}
+
+function renderCycle(focusCount) {
+  const container = document.getElementById("cycle-dots");
+  container.innerHTML = "";
+  for (let i = 0; i < 4; i++) {
+    const dot = document.createElement("span");
+    dot.className = "dot" + (i < focusCount ? " filled" : "");
+    container.appendChild(dot);
+  }
+}
+
+let audioCtx = null;
+
+function playBeep() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === "suspended") {
+    audioCtx.resume();
+  }
+  const oscillator = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  oscillator.connect(gain);
+  gain.connect(audioCtx.destination);
+  oscillator.type = "sine";
+  oscillator.frequency.value = 800;
+  oscillator.start();
+  oscillator.stop(audioCtx.currentTime + 0.5);
+}
+
+function notify(message) {
+  if ("Notification" in window && Notification.permission === "granted") {
+    new Notification("PomodoroZion", { body: message });
+  }
+  if ("Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission();
+  }
+}
+
+function startEdit(task) {
+  editingTaskId = task.id;
+  titleInput.value = task.title;
+  estimatedPomodorosInput.value = task.estimatedPomodoros;
+  createBtn.textContent = "Guardar cambios";
+  validateInput();
+}
+
+async function deleteTask(id) {
+  if (!confirm("Eliminar esta tarea?")) return;
+  await fetch(API_URL + "/" + id, { method: "DELETE" });
+  loadTasks();
+}
+
+// --- Session History ---
+
+async function loadTodayStats() {
+  try {
+    const response = await fetch("/api/sessions/today");
+    const stats = await response.json();
+    document.getElementById("todayFocusCount").textContent = stats.focusCount;
+    document.getElementById("todayFocusTime").textContent = formatDuration(stats.focusSeconds);
+    document.getElementById("todayBreakCount").textContent = stats.breakCount;
+    document.getElementById("todayBreakTime").textContent = formatDuration(stats.breakSeconds);
+  } catch (e) {
+    // sin conexión
+  }
+}
+
+async function loadRecentSessions() {
+  try {
+    const response = await fetch("/api/sessions/recent");
+    const sessions = await response.json();
+    renderSessionList(sessions);
+  } catch (e) {
+    // sin conexión
+  }
+}
+
+function renderSessionList(sessions) {
+  const list = document.getElementById("sessionList");
+  list.innerHTML = "";
+
+  if (sessions.length === 0) {
+    list.innerHTML = "<li class='empty'>No hay sesiones registradas</li>";
+    return;
+  }
+
+  sessions.forEach((session) => {
+    const li = document.createElement("li");
+    li.className = "session-item" + (session.phase !== "FOCUS" ? " break-session" : "");
+
+    const phaseLabel = phaseName(session.phase);
+    const time = new Date(session.completedAt).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+    const taskInfo = session.taskTitle ? session.taskTitle : "Sin tarea";
+    const duration = formatDuration(session.durationSeconds);
+
+    li.innerHTML = `
+      <div class="session-phase">${phaseLabel}</div>
+      <div class="session-task">${taskInfo}</div>
+      <div class="session-meta">${duration} · ${time}</div>
+    `;
+
+    list.appendChild(li);
+  });
+}
+
+function formatDuration(totalSeconds) {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  if (hours > 0) {
+    return hours + "h " + minutes + "m";
+  }
+  return minutes + "m";
+}
+
+function loadSessions() {
+  loadTodayStats();
+  loadRecentSessions();
+}
+
+// --- Autenticación ---
+const authOverlay = document.getElementById("auth-overlay");
+const mainContent = document.querySelector("main");
+const authError = document.getElementById("auth-error");
+const loginForm = document.getElementById("login-form");
+const registerForm = document.getElementById("register-form");
+
+function showAuth() {
+  authOverlay.hidden = false;
+  mainContent.hidden = true;
+}
+
+function hideAuth(username) {
+  authOverlay.hidden = true;
+  mainContent.hidden = false;
+  document.getElementById("user-name").textContent = username;
+  document.getElementById("logoutBtn").hidden = false;
+}
+
+function showAuthError(message) {
+  authError.textContent = message;
+  authError.hidden = false;
+}
+
+function switchTab(tab) {
+  const isLogin = tab === "login";
+  loginForm.hidden = !isLogin;
+  registerForm.hidden = isLogin;
+  document.getElementById("tab-login").classList.toggle("active", isLogin);
+  document.getElementById("tab-register").classList.toggle("active", !isLogin);
+  authError.hidden = true;
+}
+
+document
+  .getElementById("tab-login")
+  .addEventListener("click", () => switchTab("login"));
+document
+  .getElementById("tab-register")
+  .addEventListener("click", () => switchTab("register"));
+
+loginForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const username = document.getElementById("login-username").value.trim();
+  const password = document.getElementById("login-password").value;
+
+  const res = await fetch("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
   });
 
-  document.getElementById("resetTimerBtn").addEventListener("click", () => {
-    clearInterval(intervalo);
-    corriendo = false;
-    segundos = 25 * 60;
-    actualizarDisplay();
+  if (!res.ok) {
+    showAuthError("Usuario o contraseña incorrectos");
+    return;
+  }
+
+  const user = await res.json();
+  loginForm.reset();
+  hideAuth(user.username);
+  startApp();
+});
+
+registerForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const username = document.getElementById("register-username").value.trim();
+  const password = document.getElementById("register-password").value;
+
+  const res = await fetch("/api/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
   });
+
+  if (!res.ok) {
+    let msg = "No se pudo crear la cuenta";
+    try {
+      const err = await res.json();
+      if (err.errors) msg = Object.values(err.errors).join(". ");
+    } catch (_) {}
+    showAuthError(msg);
+    return;
+  }
+
+  const loginRes = await fetch("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+
+  if (!loginRes.ok) {
+    registerForm.reset();
+    switchTab("login");
+    showAuthError("Cuenta creada. Inicia sesión.");
+    return;
+  }
+
+  const user = await loginRes.json();
+  registerForm.reset();
+  hideAuth(user.username);
+  startApp();
+});
+
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+  await fetch("/api/auth/logout", { method: "POST" });
+  location.reload();
+});
+
+// Al cargar la pagina: ¿hay sesion?
+(async () => {
+  try {
+    const res = await fetch("/api/auth/me");
+    if (res.ok) {
+      const user = await res.json();
+      hideAuth(user.username);
+      startApp();
+    } else {
+      showAuth();
+    }
+  } catch (e) {
+    showAuth();
+  }
+})();
