@@ -17,10 +17,11 @@ public class TaskService {
     // CREATE
     // ----------------
 
-    public TaskDTO createTask(TaskCreateDTO dto) {
+    public TaskDTO createTask(TaskCreateDTO dto, Long userId) {
         Task task = new Task(
                 dto.getTitle(),
                 dto.getEstimatedPomodoros());
+        task.setUserId(userId);
 
         Task saved = taskRepository.save(task);
         return mapToDTO(saved);
@@ -29,8 +30,8 @@ public class TaskService {
     // ----------------
     // GET ALL
     // ----------------
-    public List<TaskDTO> getAllTasks() {
-        return taskRepository.findAll()
+    public List<TaskDTO> getAllTasks(Long userId) {
+        return taskRepository.findByUserId(userId)
                 .stream()
                 .map(this::mapToDTO)
                 .toList();
@@ -39,19 +40,16 @@ public class TaskService {
     // ----------------
     // GET BY ID
     // ----------------
-    public TaskDTO getTaskById(Long id) {
-        Task task = taskRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-
+    public TaskDTO getTaskById(Long id, Long userId) {
+        Task task = findOwnedTask(id, userId);
         return mapToDTO(task);
     }
 
     // ----------------
     // UPDATE (simple)
     // ----------------
-    public TaskDTO updateTask(Long id, TaskCreateDTO dto) {
-        Task task = taskRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    public TaskDTO updateTask(Long id, TaskCreateDTO dto, Long userId) {
+        Task task = findOwnedTask(id, userId);
 
         task.setTitle(dto.getTitle());
         task.setEstimatedPomodoros(dto.getEstimatedPomodoros());
@@ -63,11 +61,9 @@ public class TaskService {
     // ----------------
     // DELETE
     // ----------------
-    public void deleteTask(Long id) {
-        if (!taskRepository.existsById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
-        taskRepository.deleteById(id);
+    public void deleteTask(Long id, Long userId) {
+        Task task = findOwnedTask(id, userId);
+        taskRepository.delete(task);
     }
 
     // ----------------
@@ -93,9 +89,8 @@ public class TaskService {
         }
     }
 
-    public TaskDTO completePomodoro(Long id) {
-        Task task = taskRepository.findById(id).orElseThrow(
-                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task with id " + id + " not found"));
+    public TaskDTO completePomodoro(Long id, Long userId) {
+        Task task = findOwnedTask(id, userId);
 
         if (task.getCompletedPomodoros() >= task.getEstimatedPomodoros()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Task already completed");
@@ -107,6 +102,17 @@ public class TaskService {
         Task updated = taskRepository.save(task);
         return mapToDTO(updated);
 
+    }
+
+    private Task findOwnedTask(Long id, Long userId) {
+        Task task = taskRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        if (!task.getUserId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+
+        return task;
     }
 
 }

@@ -28,17 +28,25 @@
         </svg>
         Pomodoro Zion 🌴
       </h1>
+      <div id="user-bar">
+        <span id="user-name"></span>
+        <button id="logoutBtn" hidden>Cerrar sesión</button>
+      </div>
     </header>
 
-    <main>
+    <main hidden>
       <section id="pomodoro-section">
         <h2>Temporizador</h2>
 
         <div id="timer">25:00</div>
 
+        <div id="phase"></div>
+        <div id="cycle-dots"></div>
+        <div class="timer-buttons">
         <button id="startTimerBtn">Iniciar</button>
-
+        <button id="pauseTimerBtn">Pausar</button>
         <button id="resetTimerBtn">Reiniciar</button>
+        </div>
       </section>
 
       <section id="task-section">
@@ -60,11 +68,62 @@
 
         <ul id="taskList"></ul>
       </section>
+
+      <section id="stats-section">
+        <h2>Estadísticas de Hoy</h2>
+        <div class="stats-grid">
+          <div class="stat-card focus">
+            <span class="stat-value" id="todayFocusCount">0</span>
+            <span class="stat-label">Enfoques</span>
+          </div>
+          <div class="stat-card focus-time">
+            <span class="stat-value" id="todayFocusTime">0m</span>
+            <span class="stat-label">Tiempo enfoque</span>
+          </div>
+          <div class="stat-card break">
+            <span class="stat-value" id="todayBreakCount">0</span>
+            <span class="stat-label">Descansos</span>
+          </div>
+          <div class="stat-card break-time">
+            <span class="stat-value" id="todayBreakTime">0m</span>
+            <span class="stat-label">Tiempo descanso</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="history-section">
+        <h2>Historial Reciente</h2>
+        <ul id="sessionList"></ul>
+      </section>
     </main>
 
     <footer>
       <p>&copy; 2026 Pomodoro Zion</p>
     </footer>
+
+    <div id="auth-overlay">
+      <div class="auth-card">
+        <h2>Bienvenido</h2>
+        <div class="auth-tabs">
+          <button type="button" id="tab-login" class="auth-tab active">Iniciar sesión</button>
+          <button type="button" id="tab-register" class="auth-tab">Registrarse</button>
+        </div>
+
+        <form id="login-form">
+          <input type="text" id="login-username" placeholder="Usuario" required />
+          <input type="password" id="login-password" placeholder="Contraseña" required />
+          <button type="submit">Entrar</button>
+        </form>
+
+        <form id="register-form" hidden>
+          <input type="text" id="register-username" placeholder="Usuario (mín. 6)" minlength="6" required />
+          <input type="password" id="register-password" placeholder="Contraseña (mín. 6)" minlength="6" required />
+          <button type="submit">Crear cuenta</button>
+        </form>
+
+        <p id="auth-error" class="auth-error" hidden></p>
+      </div>
+    </div>
 
     <script src="script.js"></script>
   </body>

@@ -6,8 +6,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface TimerRepository extends JpaRepository<Timer, Long> {
+public interface UserRepository extends JpaRepository<User, Long> {
+    
+    Optional<User> findByUsername(String username);
 
-    Optional<Timer> findByUserId(Long userId);
+    boolean existsByUsername(String username);
 
 }

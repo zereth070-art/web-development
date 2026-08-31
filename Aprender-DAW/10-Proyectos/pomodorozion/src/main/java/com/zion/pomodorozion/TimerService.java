@@ -5,12 +5,12 @@ import java.time.Instant;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
 @Service
 public class TimerService {
 
     private final TimerRepository timerRepository;
     private final TaskService taskService;
+    private final PomodoroSessionService sessionService;
 
     @Value("${pomodoro.duration:25}")
     private int focusMinutes;
@@ -21,23 +21,24 @@ public class TimerService {
     @Value("${pomodoro.long-break:15}")
     private int longBreakMinutes;
 
-    public TimerService(TimerRepository timerRepository, TaskService taskService) {
+    public TimerService(TimerRepository timerRepository, TaskService taskService, PomodoroSessionService sessionService) {
         this.timerRepository = timerRepository;
         this.taskService = taskService;
+        this.sessionService =  sessionService;
     }
 
     // ----------------
     // GET STATE
     // ----------------
-    public TimerState getState() {
-        return toState(getTimer());
+    public TimerState getState(Long userId) {
+        return toState(getTimer(userId));
     }
 
     // ----------------
     // START
     // ----------------
-    public TimerState start() {
-        Timer timer = getTimer();
+    public TimerState start(Long userId) {
+        Timer timer = getTimer(userId);
 
         if (!timer.isRunning()) {
             long remaining = secondsRemaining(timer);
@@ -56,8 +57,8 @@ public class TimerService {
     // ----------------
     // PAUSE
     // ----------------
-    public TimerState pause() {
-        Timer timer = getTimer();
+    public TimerState pause(Long userId) {
+        Timer timer = getTimer(userId);
 
         if (timer.isRunning()) {
             timer.setRemainingSecondsAtStart(secondsRemaining(timer));
@@ -72,8 +73,8 @@ public class TimerService {
     // ----------------
     // RESET
     // ----------------
-    public TimerState reset() {
-        Timer timer = getTimer();
+    public TimerState reset(Long userId) {
+        Timer timer = getTimer(userId);
 
         timer.setRemainingSecondsAtStart(fullDuration(timer.getPhase()));
         timer.setStartedAt(null);
@@ -86,10 +87,13 @@ public class TimerService {
     // ----------------
     // FINISH (transition)
     // ----------------
-    public TimerState finish() {
-        Timer timer = getTimer();
+    public TimerState finish(Long userId) {
+        Timer timer = getTimer(userId);
 
-        if (timer.getPhase() == TimerPhase.FOCUS) {
+        TimerPhase completedPhase = timer.getPhase();
+        long duration = fullDuration(completedPhase);
+
+        if (completedPhase == TimerPhase.FOCUS) {
             timer.setFocusCountInCycle(timer.getFocusCountInCycle() + 1);
 
             completePomodoroIfSelected(timer);
@@ -97,12 +101,19 @@ public class TimerService {
             boolean longBreak = timer.getFocusCountInCycle() % 4 == 0;
             timer.setPhase(longBreak ? TimerPhase.LONG_BREAK : TimerPhase.SHORT_BREAK);
         } else {
-            boolean wasLongBreak = timer.getPhase() == TimerPhase.LONG_BREAK;
+            boolean wasLongBreak = completedPhase == TimerPhase.LONG_BREAK;
             timer.setPhase(TimerPhase.FOCUS);
             if (wasLongBreak) {
                 timer.setFocusCountInCycle(0);
             }
         }
+
+        sessionService.recordSession(
+            userId,
+            completedPhase,
+            timer.getSelectedTaskId(),
+            timer.getStartedAt(),
+            duration);
 
         timer.setRemainingSecondsAtStart(fullDuration(timer.getPhase()));
         timer.setStartedAt(null);
@@ -115,13 +126,13 @@ public class TimerService {
     // ----------------
     // SELECT TASK
     // ----------------
-    public TimerState selectTask(Long taskId) {
-        Timer timer = getTimer();
+    public TimerState selectTask(Long taskId, Long userId) {
+        Timer timer = getTimer(userId);
 
         if (taskId == null || taskId <= 0) {
             timer.setSelectedTaskId(0);
         } else {
-            taskService.getTaskById(taskId);
+            taskService.getTaskById(taskId, userId);
             timer.setSelectedTaskId(taskId);
         }
         timerRepository.save(timer);
@@ -139,16 +150,16 @@ public class TimerService {
             return;
         }
 
-        TaskDTO task = taskService.getTaskById(taskId);
+        TaskDTO task = taskService.getTaskById(taskId, timer.getUserId());
         if (task.getStatus() != TaskStatus.COMPLETED) {
-            taskService.completePomodoro(taskId);
+            taskService.completePomodoro(taskId, timer.getUserId());
         }
     }
 
-    private Timer getTimer() {
-        return timerRepository.findById(1L).orElseGet(() -> {
+    private Timer getTimer(Long userId) {
+        return timerRepository.findByUserId(userId).orElseGet(() -> {
             Timer timer = new Timer();
-            timer.setId(1L);
+            timer.setUserId(userId);
             timer.setPhase(TimerPhase.FOCUS);
             timer.setRemainingSecondsAtStart(fullDuration(TimerPhase.FOCUS));
             timer.setRunning(false);
