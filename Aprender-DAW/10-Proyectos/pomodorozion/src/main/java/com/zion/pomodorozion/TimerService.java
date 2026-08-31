@@ -91,7 +91,7 @@ public class TimerService {
         Timer timer = getTimer(userId);
 
         TimerPhase completedPhase = timer.getPhase();
-        long duration = secondsRemaining(timer);
+        long duration = fullDuration(completedPhase);
 
         if (completedPhase == TimerPhase.FOCUS) {
             timer.setFocusCountInCycle(timer.getFocusCountInCycle() + 1);
