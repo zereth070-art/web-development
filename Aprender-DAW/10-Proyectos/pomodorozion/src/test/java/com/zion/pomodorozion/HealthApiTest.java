@@ -190,4 +190,33 @@ class HealthApiTest {
 
         }
 
+        @Test
+        void cambiarPassword() throws Exception {
+                MockHttpSession session = new MockHttpSession();
+                mockMvc.perform(post("/api/auth/register")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"username": "paquitoElChocolatero3", "password": "123456"}
+                                                        """)
+                                .session(session))
+                                .andExpect(status().isCreated());
+                        
+                mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                         .content("""
+                {"username": "paquitoElChocolatero3", "password": "123456"}
+                """)
+                        .session(session))
+                        .andExpect(status().isOk());
+                
+                mockMvc.perform(post("/api/auth/change-password")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"currentPassword": "123456", "newPassword": "654321"}
+                                                        """)
+                                .session(session))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.username").value("paquitoElChocolatero3"));
+        }
+
 }
