@@ -28,5 +28,17 @@ public class AuthService {
         return new UserDTO(saved.getId(), saved.getUsername());
     }
 
+     public UserDTO changePassword( User user, String oldPassword, String newPassword) {
+        user = userRepository.findById(user.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+        if (!passwordEncoder.matches(oldPassword, user.getPasswordHash())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Contraseña incorrecta");
+        } else {
+            String hash = passwordEncoder.encode(newPassword);
+            user.setPasswordHash(hash);
+            userRepository.save(user);
+            return new UserDTO(user.getId(), user.getUsername());
+        }
+    } 
     
 }

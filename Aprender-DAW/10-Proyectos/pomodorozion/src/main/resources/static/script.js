@@ -492,3 +492,26 @@ document.getElementById("logoutBtn").addEventListener("click", async () => {
     showAuth();
   }
 })();
+
+document.getElementById("change-password-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const currentPassword = document.getElementById("currentPasswordInput").value;
+  const newPassword = document.getElementById("changePasswordInput").value;
+
+  fetch("/api/auth/change-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  })
+    .then(async (res) => {
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Error al cambiar la contraseña");
+      }
+      alert("Contraseña cambiada con éxito");
+      document.getElementById("change-password-form").reset();
+    })
+    .catch((e) => {
+      alert(e.message || "Error al cambiar la contraseña");
+    });
+});

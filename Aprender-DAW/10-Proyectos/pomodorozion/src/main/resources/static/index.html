@@ -31,6 +31,12 @@
       <div id="user-bar">
         <span id="user-name"></span>
         <button id="logoutBtn" hidden>Cerrar sesión</button>
+        <form hidden id="change-password-form">
+          <input type="password" id="currentPasswordInput" placeholder="Contraseña actual" minlength="6" required />
+          <input type="password" id="changePasswordInput" placeholder="Nueva contraseña" minlength="6" required />
+          <button type="submit">Cambiar contraseña</button>
+          <p id="change-password-error" class="auth-error" hidden></p>
+        </form>
       </div>
     </header>
 

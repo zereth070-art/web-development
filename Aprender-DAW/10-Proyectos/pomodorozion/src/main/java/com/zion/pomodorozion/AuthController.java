@@ -90,6 +90,14 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/change-password")
+
+    public ResponseEntity<UserDTO> changePassword(@Valid @RequestBody CambiarPasswordDTO dto, Authentication authentication) {
+        User user = userRepository.findByUsername(authentication.getName()).orElseThrow();
+        UserDTO updated = authService.changePassword(user, dto.getCurrentPassword(), dto.getNewPassword());
+        return ResponseEntity.ok(updated);
+
+    }
 
 }
 
