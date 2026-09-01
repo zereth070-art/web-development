@@ -7,6 +7,15 @@ const createBtn = document.getElementById("createBtn");
 let selectedTaskId = 0;
 const API_URL = "/api/tasks";
 
+function escapeHtml(unsafe) {
+  unsafe = unsafe.replaceAll("&", "&amp;");
+  unsafe = unsafe.replaceAll("<", "&lt;");
+  unsafe = unsafe.replaceAll(">", "&gt;");
+  unsafe = unsafe.replaceAll("'", "&#039;");
+  unsafe = unsafe.replaceAll('"', "&quot;");
+  return unsafe;
+}
+
 function validateInput() {
   const title = titleInput.value.trim();
   const estimatedPomodoros = Number(estimatedPomodorosInput.value);
@@ -36,7 +45,7 @@ async function loadTasks() {
     else statusTexto = "Completada";
 
     li.innerHTML = `
-                <div class ="task-title">${task.title}</div>
+                <div class ="task-title">${escapeHtml(task.title)}</div>
                 
                 <button class="select-btn">
                    ${task.id === selectedTaskId ? "✓ Seleccionada" : "Seleccionar"}
