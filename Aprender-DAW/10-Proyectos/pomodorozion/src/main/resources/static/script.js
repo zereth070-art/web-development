@@ -5,7 +5,7 @@ const estimatedPomodorosInput = document.getElementById(
 let editingTaskId = null;
 const createBtn = document.getElementById("createBtn");
 let selectedTaskId = 0;
-const API_URL = "/tasks";
+const API_URL = "/api/tasks";
 
 function validateInput() {
   const title = titleInput.value.trim();

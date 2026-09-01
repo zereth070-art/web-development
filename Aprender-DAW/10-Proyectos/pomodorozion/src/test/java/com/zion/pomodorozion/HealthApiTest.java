@@ -82,7 +82,7 @@ class HealthApiTest {
                                 .session(session))
                                 .andExpect(status().isOk());
 
-                mockMvc.perform(get("/tasks")
+                mockMvc.perform(get("/api/tasks")
                                 .session(session))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$").isArray());
@@ -106,7 +106,7 @@ class HealthApiTest {
                                 .session(session))
                                 .andExpect(status().isOk());
                 // creo la tarea
-                mockMvc.perform(post("/tasks")
+                mockMvc.perform(post("/api/tasks")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
                                                 {"title": "Mi tarea", "estimatedPomodoros": 3}
@@ -117,7 +117,7 @@ class HealthApiTest {
                                 .andExpect(jsonPath("$.status").value("PENDING"));
 
                 // al recojo
-                mockMvc.perform(get("/tasks")
+                mockMvc.perform(get("/api/tasks")
                                 .session(session))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$[0].title").value("Mi tarea"));
@@ -153,7 +153,7 @@ class HealthApiTest {
                                 .session(session1))
                                 .andExpect(status().isOk());
                 // crear tarea con la primera sesion
-                String respuesta = mockMvc.perform(post("/tasks")
+                String respuesta = mockMvc.perform(post("/api/tasks")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""
                                                 {"title": "Mi polla con peluca", "estimatedPomodoros": 3}
@@ -176,7 +176,7 @@ class HealthApiTest {
                                 .andExpect(status().isOk());
 
                 // recojo tareas
-                mockMvc.perform(get("/tasks")
+                mockMvc.perform(get("/api/tasks")
                                 .session(session2))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$").isArray())
@@ -184,7 +184,7 @@ class HealthApiTest {
 
                 int id = com.jayway.jsonpath.JsonPath.read(respuesta, "$.id");
 
-                mockMvc.perform(get("/tasks/" + id)
+                mockMvc.perform(get("/api/tasks/" + id)
                                 .session(session2))
                                 .andExpect(status().isNotFound());
 
