@@ -465,3 +465,14 @@ section:nth-child(4) { animation-delay: 0.3s; }
     }
 }
 
+#toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  padding: 12px 24px;
+  border-radius: 8px;
+  background: #c0392b;
+  color: #fff;
+}

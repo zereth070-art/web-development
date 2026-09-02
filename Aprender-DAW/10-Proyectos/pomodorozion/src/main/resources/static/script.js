@@ -106,7 +106,7 @@ async function createTask() {
   const title = titleInput.value.trim();
   const estimatedPomodoros = Number(estimatedPomodorosInput.value);
   if (title.trim() === "") {
-    alert("Please enter a task title.");
+    showToast("Por favor, ingresa un título para la tarea.");
     return;
   }
 
@@ -115,7 +115,7 @@ async function createTask() {
     Number.isNaN(estimatedPomodoros) ||
     estimatedPomodoros <= 0
   ) {
-    alert("Please enter a valid number of estimated pomodoros.");
+    showToast("Por favor, ingresa un número válido de pomodoros estimados.");
     return;
   }
   
@@ -373,7 +373,6 @@ function loadSessions() {
 // --- Autenticación ---
 const authOverlay = document.getElementById("auth-overlay");
 const mainContent = document.querySelector("main");
-const authError = document.getElementById("auth-error");
 const loginForm = document.getElementById("login-form");
 const registerForm = document.getElementById("register-form");
 
@@ -389,18 +388,12 @@ function hideAuth(username) {
   document.getElementById("logoutBtn").hidden = false;
 }
 
-function showAuthError(message) {
-  authError.textContent = message;
-  authError.hidden = false;
-}
-
 function switchTab(tab) {
   const isLogin = tab === "login";
   loginForm.hidden = !isLogin;
   registerForm.hidden = isLogin;
   document.getElementById("tab-login").classList.toggle("active", isLogin);
   document.getElementById("tab-register").classList.toggle("active", !isLogin);
-  authError.hidden = true;
 }
 
 document
@@ -422,7 +415,7 @@ loginForm.addEventListener("submit", async (e) => {
   });
 
   if (!res.ok) {
-    showAuthError("Usuario o contraseña incorrectos");
+    showToast("Usuario o contraseña incorrectos");
     return;
   }
 
@@ -449,7 +442,7 @@ registerForm.addEventListener("submit", async (e) => {
       const err = await res.json();
       if (err.errors) msg = Object.values(err.errors).join(". ");
     } catch (_) {}
-    showAuthError(msg);
+    showToast(msg);
     return;
   }
 
@@ -462,7 +455,7 @@ registerForm.addEventListener("submit", async (e) => {
   if (!loginRes.ok) {
     registerForm.reset();
     switchTab("login");
-    showAuthError("Cuenta creada. Inicia sesión.");
+    showToast("Cuenta creada. Inicia sesión.");
     return;
   }
 
@@ -486,10 +479,10 @@ document.getElementById("logoutBtn").addEventListener("click", async () => {
       hideAuth(user.username);
       startApp();
     } else {
-      showAuth();
+      showToast("Inicia sesión para continuar");
     }
   } catch (e) {
-    showAuth();
+    showToast("Error al verificar el estado de inicio de sesión");  
   }
 })();
 
@@ -508,10 +501,23 @@ document.getElementById("change-password-form").addEventListener("submit", async
         const err = await res.json();
         throw new Error(err.message || "Error al cambiar la contraseña");
       }
-      alert("Contraseña cambiada con éxito");
+      showToast("Contraseña cambiada con éxito");
       document.getElementById("change-password-form").reset();
     })
     .catch((e) => {
-      alert(e.message || "Error al cambiar la contraseña");
+      showToast(e.message || "Error al cambiar la contraseña");
     });
 });
+
+
+function showToast(message) {
+  const toast = document.getElementById("toast");
+  toast.textContent = message;
+  toast.hidden = false;
+  if (message){
+    setTimeout(() => {
+      toast.hidden = true;
+    }, 3000);
+  }
+
+}
