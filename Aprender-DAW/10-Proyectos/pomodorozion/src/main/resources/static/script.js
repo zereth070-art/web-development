@@ -62,10 +62,20 @@ function validateInput() {
 titleInput.addEventListener("input", validateInput);
 
 async function loadTasks() {
-  const response = await fetch(API_URL);
-  const tasks = await response.json();
-  allTasks = tasks;
-  renderTasks(tasks);
+  try {
+    const response = await fetch(API_URL);
+    if (!response.ok) return;
+    allTasks = await response.json();
+    applySearch();
+  } catch (e) {
+    // sin conexión con el servidor: no hacer nada
+  }
+}
+
+function applySearch() {
+  const texto = taskSearch.value.trim().toLowerCase();
+  const filtradas = allTasks.filter((t) => t.title.toLowerCase().includes(texto));
+  renderTasks(filtradas);
 }
 
 async function completePomodoro(id) {
@@ -96,6 +106,12 @@ async function deleteTask(id) {
 function renderTasks(filtradas) {
   const taskList = document.getElementById("taskList");
   taskList.innerHTML = "";
+
+  if (filtradas.length === 0) {
+    taskList.innerHTML = "<li class='empty'>No se encontraron tareas</li>";
+    return;
+  }
+
   for (const task of filtradas) {
     const li = document.createElement("li");
     let statusTexto;
@@ -114,11 +130,11 @@ function renderTasks(filtradas) {
                   ${statusTexto}
                 </div>
                 <button class="pomodoro-btn">
-                   +1 Pomodoro
+                  +1 Pomodoro
                 </button>
-<button class="edit-btn">Editar</button>
-                 <button class="delete-btn">Eliminar</button>
-                 `;
+                <button class="edit-btn">Editar</button>
+                <button class="delete-btn">Eliminar</button>
+                `;
     li.dataset.status = task.status;
     li.dataset.selected = task.id === selectedTaskId;
     taskList.appendChild(li);
@@ -134,14 +150,7 @@ function renderTasks(filtradas) {
   }
 }
 
-taskSearch.addEventListener("input", () => {
-  const texto = taskSearch.value.trim().toLowerCase();
-  const filtradas = allTasks.filter(t => t.title.toLowerCase().includes(texto));
-  renderTasks(filtradas);
-  if (filtradas.length === 0) {
-    document.getElementById("taskList").innerHTML = "<li class='empty'>No se encontraron tareas</li>";
-  }
-});
+taskSearch.addEventListener("input", applySearch);
 
 // === Timer ===
 function renderTimer(state) {
@@ -223,8 +232,10 @@ document
 let ws = null;
 let wsConnected = false;
 let finishing = false;
+let sessionAlive = true;
 
 function connectWs() {
+  if (!sessionAlive) return;
   const protocol = location.protocol === "https:" ? "wss" : "ws";
   ws = new WebSocket(protocol + "://" + location.host + "/ws");
 
@@ -238,7 +249,7 @@ function connectWs() {
 
   ws.onclose = () => {
     wsConnected = false;
-    setTimeout(connectWs, 3000);
+    if (sessionAlive) setTimeout(connectWs, 3000);
   };
 
   ws.onerror = () => {
@@ -270,9 +281,16 @@ function applyState(state) {
 
 // Plan B: si el WebSocket falla, volvemos al polling clásico
 async function poll() {
-  if (wsConnected) return;
+  if (wsConnected || !sessionAlive) return;
   try {
     const response = await fetch("/api/timer");
+    if (response.status === 401 || response.status === 403) {
+      sessionAlive = false;
+      if (ws) ws.close();
+      showAuth();
+      return;
+    }
+    if (!response.ok) return;
     applyState(await response.json());
   } catch (e) {
     // sin conexión con el servidor: no hacer nada
@@ -282,7 +300,15 @@ async function poll() {
 let appStarted = false;
 
 function startApp() {
-  if (appStarted) return;
+  sessionAlive = true;
+
+  if (appStarted) {
+    if (!wsConnected) connectWs();
+    loadTasks();
+    loadSessions();
+    return;
+  }
+
   appStarted = true;
   loadTasks();
   loadSessions();
@@ -377,7 +403,9 @@ function renderSessionList(sessions) {
       hour: "2-digit",
       minute: "2-digit",
     });
-    const taskInfo = session.taskTitle ? session.taskTitle : "Sin tarea";
+    const taskInfo = session.taskTitle
+      ? escapeHtml(session.taskTitle)
+      : "Sin tarea";
     const duration = formatDuration(session.durationSeconds);
 
     li.innerHTML = `
