@@ -1,12 +1,20 @@
+// === Estado global y referencias al DOM ===
 const titleInput = document.getElementById("titleInput");
 const estimatedPomodorosInput = document.getElementById(
   "estimatedPomodorosInput",
 );
-let editingTaskId = null;
 const createBtn = document.getElementById("createBtn");
-let selectedTaskId = 0;
 const API_URL = "/api/tasks";
+let editingTaskId = null;
+let selectedTaskId = 0;
 
+// === Autenticación ===
+const authOverlay = document.getElementById("auth-overlay");
+const mainContent = document.querySelector("main");
+const loginForm = document.getElementById("login-form");
+const registerForm = document.getElementById("register-form");
+
+// === Utilidades ===
 function escapeHtml(unsafe) {
   unsafe = unsafe.replaceAll("&", "&amp;");
   unsafe = unsafe.replaceAll("<", "&lt;");
@@ -16,6 +24,31 @@ function escapeHtml(unsafe) {
   return unsafe;
 }
 
+function formatTimer(totalSeconds) {
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return mins + ":" + String(secs).padStart(2, "0");
+}
+
+function phaseName(phase) {
+  const names = {
+    FOCUS: "Enfoque",
+    SHORT_BREAK: "Descanso corto",
+    LONG_BREAK: "Descanso largo",
+  };
+  return names[phase] || phase;
+}
+
+function formatDuration(totalSeconds) {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  if (hours > 0) {
+    return hours + "h " + minutes + "m";
+  }
+  return minutes + "m";
+}
+
+// === Tareas (CRUD) ===
 function validateInput() {
   const title = titleInput.value.trim();
   const estimatedPomodoros = Number(estimatedPomodorosInput.value);
@@ -29,6 +62,52 @@ function validateInput() {
 
 titleInput.addEventListener("input", validateInput);
 estimatedPomodorosInput.addEventListener("input", validateInput);
+
+document.getElementById("createBtn").addEventListener("click", createTask);
+
+async function createTask() {
+  const title = titleInput.value.trim();
+  const estimatedPomodoros = Number(estimatedPomodorosInput.value);
+  if (title.trim() === "") {
+    showToast("Por favor, ingresa un título para la tarea.");
+    return;
+  }
+
+  if (
+    estimatedPomodorosInput.value.trim() === "" ||
+    Number.isNaN(estimatedPomodoros) ||
+    estimatedPomodoros <= 0
+  ) {
+    showToast("Por favor, ingresa un número válido de pomodoros estimados.");
+    return;
+  }
+
+  if (editingTaskId !== null) {
+    await fetch(API_URL + "/" + editingTaskId, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: title,
+        estimatedPomodoros: estimatedPomodoros,
+      }),
+    });
+    editingTaskId = null;
+    createBtn.textContent = "Crear tarea";
+  } else {
+    await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: title,
+        estimatedPomodoros: estimatedPomodoros,
+      }),
+    });
+  }
+
+  titleInput.value = "";
+  estimatedPomodorosInput.value = "";
+  loadTasks();
+}
 
 async function loadTasks() {
   const response = await fetch(API_URL);
@@ -100,61 +179,21 @@ async function selectTaskId(id) {
   loadTasks();
 }
 
-document.getElementById("createBtn").addEventListener("click", createTask);
+function startEdit(task) {
+  editingTaskId = task.id;
+  titleInput.value = task.title;
+  estimatedPomodorosInput.value = task.estimatedPomodoros;
+  createBtn.textContent = "Guardar cambios";
+  validateInput();
+}
 
-async function createTask() {
-  const title = titleInput.value.trim();
-  const estimatedPomodoros = Number(estimatedPomodorosInput.value);
-  if (title.trim() === "") {
-    showToast("Por favor, ingresa un título para la tarea.");
-    return;
-  }
-
-  if (
-    estimatedPomodorosInput.value.trim() === "" ||
-    Number.isNaN(estimatedPomodoros) ||
-    estimatedPomodoros <= 0
-  ) {
-    showToast("Por favor, ingresa un número válido de pomodoros estimados.");
-    return;
-  }
-  
-  if (editingTaskId !== null) {
-    await fetch(API_URL + "/" + editingTaskId, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: title, estimatedPomodoros: estimatedPomodoros }),
-    });
-    editingTaskId = null;
-    createBtn.textContent = "Crear tarea";
-  } else {
-    await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: title, estimatedPomodoros: estimatedPomodoros }),
-    });
-  }
-
-  titleInput.value = "";
-  estimatedPomodorosInput.value = "";
+async function deleteTask(id) {
+  if (!confirm("Eliminar esta tarea?")) return;
+  await fetch(API_URL + "/" + id, { method: "DELETE" });
   loadTasks();
 }
 
-function formatTimer(totalSeconds) {
-  const mins = Math.floor(totalSeconds / 60);
-  const secs = totalSeconds % 60;
-  return mins + ":" + String(secs).padStart(2, "0");
-}
-
-function phaseName(phase) {
-  const names = {
-    FOCUS: "Enfoque",
-    SHORT_BREAK: "Descanso corto",
-    LONG_BREAK: "Descanso largo",
-  };
-  return names[phase] || phase;
-}
-
+// === Timer ===
 function renderTimer(state) {
   document.getElementById("timer").textContent = formatTimer(
     state.remainingSeconds,
@@ -182,7 +221,17 @@ document
   .getElementById("pauseTimerBtn")
   .addEventListener("click", () => doAction("pause"));
 
-// --- WebSocket: el servidor empuja el estado cada segundo ---
+function renderCycle(focusCount) {
+  const container = document.getElementById("cycle-dots");
+  container.innerHTML = "";
+  for (let i = 0; i < 4; i++) {
+    const dot = document.createElement("span");
+    dot.className = "dot" + (i < focusCount ? " filled" : "");
+    container.appendChild(dot);
+  }
+}
+
+// === WebSocket y fallback (polling) ===
 let ws = null;
 let wsConnected = false;
 let finishing = false;
@@ -251,16 +300,7 @@ function startApp() {
   setInterval(poll, 1000);
 }
 
-function renderCycle(focusCount) {
-  const container = document.getElementById("cycle-dots");
-  container.innerHTML = "";
-  for (let i = 0; i < 4; i++) {
-    const dot = document.createElement("span");
-    dot.className = "dot" + (i < focusCount ? " filled" : "");
-    container.appendChild(dot);
-  }
-}
-
+// === Sonido y notificaciones ===
 let audioCtx = null;
 
 function playBeep() {
@@ -289,30 +329,19 @@ function notify(message) {
   }
 }
 
-function startEdit(task) {
-  editingTaskId = task.id;
-  titleInput.value = task.title;
-  estimatedPomodorosInput.value = task.estimatedPomodoros;
-  createBtn.textContent = "Guardar cambios";
-  validateInput();
-}
-
-async function deleteTask(id) {
-  if (!confirm("Eliminar esta tarea?")) return;
-  await fetch(API_URL + "/" + id, { method: "DELETE" });
-  loadTasks();
-}
-
-// --- Session History ---
-
+// === Estadísticas y sesiones ===
 async function loadTodayStats() {
   try {
     const response = await fetch("/api/sessions/today");
     const stats = await response.json();
     document.getElementById("todayFocusCount").textContent = stats.focusCount;
-    document.getElementById("todayFocusTime").textContent = formatDuration(stats.focusSeconds);
+    document.getElementById("todayFocusTime").textContent = formatDuration(
+      stats.focusSeconds,
+    );
     document.getElementById("todayBreakCount").textContent = stats.breakCount;
-    document.getElementById("todayBreakTime").textContent = formatDuration(stats.breakSeconds);
+    document.getElementById("todayBreakTime").textContent = formatDuration(
+      stats.breakSeconds,
+    );
   } catch (e) {
     // sin conexión
   }
@@ -339,10 +368,14 @@ function renderSessionList(sessions) {
 
   sessions.forEach((session) => {
     const li = document.createElement("li");
-    li.className = "session-item" + (session.phase !== "FOCUS" ? " break-session" : "");
+    li.className =
+      "session-item" + (session.phase !== "FOCUS" ? " break-session" : "");
 
     const phaseLabel = phaseName(session.phase);
-    const time = new Date(session.completedAt).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+    const time = new Date(session.completedAt).toLocaleTimeString("es", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
     const taskInfo = session.taskTitle ? session.taskTitle : "Sin tarea";
     const duration = formatDuration(session.durationSeconds);
 
@@ -356,26 +389,12 @@ function renderSessionList(sessions) {
   });
 }
 
-function formatDuration(totalSeconds) {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  if (hours > 0) {
-    return hours + "h " + minutes + "m";
-  }
-  return minutes + "m";
-}
-
 function loadSessions() {
   loadTodayStats();
   loadRecentSessions();
 }
 
-// --- Autenticación ---
-const authOverlay = document.getElementById("auth-overlay");
-const mainContent = document.querySelector("main");
-const loginForm = document.getElementById("login-form");
-const registerForm = document.getElementById("register-form");
-
+// === Autenticación ===
 function showAuth() {
   authOverlay.hidden = false;
   mainContent.hidden = true;
@@ -482,42 +501,45 @@ document.getElementById("logoutBtn").addEventListener("click", async () => {
       showToast("Inicia sesión para continuar");
     }
   } catch (e) {
-    showToast("Error al verificar el estado de inicio de sesión");  
+    showToast("Error al verificar el estado de inicio de sesión");
   }
 })();
 
-document.getElementById("change-password-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const currentPassword = document.getElementById("currentPasswordInput").value;
-  const newPassword = document.getElementById("changePasswordInput").value;
+document
+  .getElementById("change-password-form")
+  .addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const currentPassword = document.getElementById(
+      "currentPasswordInput",
+    ).value;
+    const newPassword = document.getElementById("changePasswordInput").value;
 
-  fetch("/api/auth/change-password", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ currentPassword, newPassword }),
-  })
-    .then(async (res) => {
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "Error al cambiar la contraseña");
-      }
-      showToast("Contraseña cambiada con éxito");
-      document.getElementById("change-password-form").reset();
+    fetch("/api/auth/change-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword, newPassword }),
     })
-    .catch((e) => {
-      showToast(e.message || "Error al cambiar la contraseña");
-    });
-});
+      .then(async (res) => {
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || "Error al cambiar la contraseña");
+        }
+        showToast("Contraseña cambiada con éxito");
+        document.getElementById("change-password-form").reset();
+      })
+      .catch((e) => {
+        showToast(e.message || "Error al cambiar la contraseña");
+      });
+  });
 
-
+// === Toast ===
 function showToast(message) {
   const toast = document.getElementById("toast");
   toast.textContent = message;
   toast.hidden = false;
-  if (message){
+  if (message) {
     setTimeout(() => {
       toast.hidden = true;
     }, 3000);
   }
-
 }

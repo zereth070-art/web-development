@@ -1,3 +1,4 @@
+/* === Variables y reset === */
 :root {
     --negro: #1a1a1a;
     --verde: #2d6a4f;
@@ -7,21 +8,28 @@
     --fondo: #f9f7f0;
     --blanco: #ffffff;
 }
-body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    background-color: var(--fondo);
-    color: var(--negro);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
 
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--fondo);
+  color: var(--negro);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* === Header y navegación === */
 header {
   background-color: var(--verde);
   padding: 1rem 2rem;
   text-align: center;
+  position: relative;
 }
 
 header h1 {
@@ -32,6 +40,44 @@ header h1 {
   font-family: 'Righteous', cursive;
 }
 
+#user-bar {
+  position: absolute;
+  top: 50%;
+  right: 1.5rem;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+#user-name {
+  color: var(--fondo);
+  font-weight: bold;
+}
+
+#logoutBtn {
+  background-color: var(--amarillo);
+  color: var(--negro);
+  border: none;
+  border-radius: 8px;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+#logoutBtn:hover {
+  background-color: var(--amarillo-claro);
+}
+
+footer {
+  background-color: var(--verde);
+  color: var(--amarillo);
+  text-align: center;
+  padding: 1rem;
+  margin-top: 2rem;
+}
+
+/* === Layout (main y secciones) === */
 main {
   max-width: 800px;
   margin: 2rem auto;
@@ -46,11 +92,58 @@ section {
   margin-bottom: 1.5rem;
   border-top: 4px solid var(--amarillo);
   animation: fadeSlideIn  0.5s ease both;
-
 }
 
-.task-status {
+section h2 {
+  color: var(--verde);
+  margin-top: 0;
+}
+
+#pomodoro-section {
+  text-align: center;
+}
+
+/* === Formulario de tareas === */
+#task-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+#task-form input {
+  padding: 0.5rem 0.75rem;
+  border: 2px solid var(--verde-claro);
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
+}
+
+#task-form input:focus {
+  border-color: var(--verde);
+}
+
+#createBtn {
+  padding: 0.5rem 1.25rem;
+  background-color: var(--amarillo);
+  color: var(--negro);
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
   font-weight: bold;
+}
+
+#createBtn:hover {
+  background-color: var(--amarillo-claro);
+}
+
+/* === Lista de tareas === */
+li {
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #ddd;
+  border-radius: 8px;
 }
 
 li[data-status="PENDING"] {
@@ -65,11 +158,19 @@ li[data-status="COMPLETED"] {
   border-left: 4px solid green;
   opacity: 0.6;
 }
-li {
-  padding: 10px;
-  margin: 10px 0;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+
+li[data-selected="true"]{
+  border: 2px solid var(--verde);
+  background-color: var(--verde-claro);
+}
+
+.task-title {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.task-status {
+  font-weight: bold;
 }
 
 .pomodoro-btn {
@@ -78,14 +179,27 @@ li {
   cursor: pointer;
 }
 
-footer {
-  background-color: var(--verde);
-  color: var(--amarillo);
-  text-align: center;
-  padding: 1rem;
-  margin-top: 2rem;
+.select-btn {
+  margin: 4px 8px 0;
+  padding: 4px 10px;
+  background-color: var(--verde-claro);
+  color: var(--blanco);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
+.edit-btn, .delete-btn {
+  margin: 4px 4px 0 0;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.edit-btn { background-color: var(--verde-claro); color: var(--blanco); }
+.delete-btn { background-color: #c0392b; color: var(--blanco); }
+
+/* === Timer === */
 #timer {
   font-size: 4rem;
   font-weight: bold;
@@ -93,6 +207,19 @@ footer {
   text-align: center;
   margin: 1rem 0;
   letter-spacing: 4px;
+}
+
+#phase {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--verde);
+  margin-bottom: 1rem;
+}
+
+.timer-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
 }
 
 #startTimerBtn {
@@ -112,75 +239,6 @@ footer {
   padding: 0.6rem 1.5rem;
   font-size: 1rem;
   cursor: pointer;
-}
-
-section h2 {
-  color: var(--verde);
-  margin-top: 0;
-}
-
-#pomodoro-section {
-  text-align: center;
-}
-
-#task-form {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-}
-
-#task-form input {
-  padding: 0.5rem 0.75rem;
-  border: 2px solid var(--verde-claro);
-  border-radius: 8px;
-  font-size: 1rem;
-  outline: none;
-}
-
-#task-form input:focus { 
-  border-color: var(--verde);
-
-}
-
-#createBtn {
-  padding: 0.5rem 1.25rem;
-  background-color: var(--amarillo);
-  color: var(--negro);
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-#createBtn:hover {
-  background-color: var(--amarillo-claro);
-}
-
-.righteous-regular {
-  font-family: "Righteous", sans-serif;
-  font-weight: 400;
-  font-style: normal;
-}
-
-
-li[data-selected="true"]{
-  border: 2px solid var(--verde);
-  background-color: var(--verde-claro);
-}
-
-#phase {
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: var(--verde);
-  margin-bottom: 1rem;
-}
-
-.timer-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 0.75rem;
 }
 
 #pauseTimerBtn {
@@ -205,21 +263,6 @@ li[data-selected="true"]{
   filter: brightness(1.15);
 }
 
-.select-btn {
-  margin: 4px 8px 0;
-  padding: 4px 10px;
-  background-color: var(--verde-claro);
-  color: var(--blanco);
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.task-title {
-  font-weight: bold;
-  margin-bottom: 4px;
-}
-
 #cycle-dots {
   margin: 0.5rem 0 1rem;
 }
@@ -237,16 +280,7 @@ li[data-selected="true"]{
   background-color: var(--verde);
 }
 
-.edit-btn, .delete-btn {
-  margin: 4px 4px 0 0;
-  padding: 4px 10px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.edit-btn { background-color: var(--verde-claro); color: var(--blanco); }
-.delete-btn { background-color: #c0392b; color: var(--blanco); }
-
+/* === Estadísticas y sesiones === */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -314,41 +348,7 @@ li[data-selected="true"]{
   font-style: italic;
 }
 
-/* --- Autenticación --- */
-
-header {
-  position: relative;
-}
-
-#user-bar {
-  position: absolute;
-  top: 50%;
-  right: 1.5rem;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-#user-name {
-  color: var(--fondo);
-  font-weight: bold;
-}
-
-#logoutBtn {
-  background-color: var(--amarillo);
-  color: var(--negro);
-  border: none;
-  border-radius: 8px;
-  padding: 0.4rem 0.9rem;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-#logoutBtn:hover {
-  background-color: var(--amarillo-claro);
-}
-
+/* === Autenticación === */
 #auth-overlay {
   position: fixed;
   inset: 0;
@@ -441,11 +441,18 @@ header {
   text-align: center;
 }
 
+/* === Utilidades y apoyo === */
 [hidden] {
   display: none !important;
 }
 
-/*  === TRANSICIONES === */
+.righteous-regular {
+  font-family: "Righteous", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+/* === Transiciones y animaciones === */
 button, input, .task-item, section {
   transition: all 0.3s ease;
 }
@@ -465,6 +472,7 @@ section:nth-child(4) { animation-delay: 0.3s; }
     }
 }
 
+/* === Toast === */
 #toast {
   position: fixed;
   bottom: 20px;
