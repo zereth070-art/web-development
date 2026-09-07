@@ -6,7 +6,7 @@ const createBtn = document.getElementById("createBtn");
 const API_URL = "/api/tasks";
 let editingTaskId = null;
 let selectedTaskId = 0;
-let allTasks = [];
+let allTasks = []; https://www.youtube.com/
 
 
 // === Autenticación ===
@@ -96,7 +96,7 @@ async function deleteTask(id) {
 function renderTasks(filtradas) {
   const taskList = document.getElementById("taskList");
   taskList.innerHTML = "";
-  for(const task of filtradas) {
+  for (const task of filtradas) {
     const li = document.createElement("li");
     let statusTexto;
     if (task.status === "PENDING") statusTexto = "Pendiente";
@@ -122,17 +122,26 @@ function renderTasks(filtradas) {
     li.dataset.status = task.status;
     li.dataset.selected = task.id === selectedTaskId;
     taskList.appendChild(li);
-  }
-  }
+    const btn = li.querySelector(".pomodoro-btn");
+    const selectBtn = li.querySelector(".select-btn");
+    const editBtn = li.querySelector(".edit-btn");
+    const deleteBtn = li.querySelector(".delete-btn");
 
-taskSearch.addEventListener("input", () =>{
+    btn.addEventListener("click", () => completePomodoro(task.id));
+    selectBtn.addEventListener("click", () => selectTaskId(task.id));
+    editBtn.addEventListener("click", () => startEdit(task));
+    deleteBtn.addEventListener("click", () => deleteTask(task.id));
+  }
+}
+
+taskSearch.addEventListener("input", () => {
   const texto = taskSearch.value.trim().toLowerCase();
   const filtradas = allTasks.filter(t => t.title.toLowerCase().includes(texto));
   renderTasks(filtradas);
-  if(filtradas.length === 0){
+  if (filtradas.length === 0) {
     document.getElementById("taskList").innerHTML = "<li class='empty'>No se encontraron tareas</li>";
   }
-  });
+});
 
 // === Timer ===
 function renderTimer(state) {
@@ -447,7 +456,7 @@ registerForm.addEventListener("submit", async (e) => {
     try {
       const err = await res.json();
       if (err.errors) msg = Object.values(err.errors).join(". ");
-    } catch (_) {}
+    } catch (_) { }
     showToast(msg);
     return;
   }
