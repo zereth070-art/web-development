@@ -7,6 +7,7 @@ const createBtn = document.getElementById("createBtn");
 const API_URL = "/api/tasks";
 let editingTaskId = null;
 let selectedTaskId = 0;
+let allTasks = [];
 
 // === Autenticación ===
 const authOverlay = document.getElementById("auth-overlay");
@@ -38,7 +39,6 @@ function phaseName(phase) {
   };
   return names[phase] || phase;
 }
-
 function formatDuration(totalSeconds) {
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -47,8 +47,7 @@ function formatDuration(totalSeconds) {
   }
   return minutes + "m";
 }
-
-// === Tareas (CRUD) ===
+// == Tareas (CRUD) ===
 function validateInput() {
   const title = titleInput.value.trim();
   const estimatedPomodoros = Number(estimatedPomodorosInput.value);
@@ -61,53 +60,6 @@ function validateInput() {
 }
 
 titleInput.addEventListener("input", validateInput);
-estimatedPomodorosInput.addEventListener("input", validateInput);
-
-document.getElementById("createBtn").addEventListener("click", createTask);
-
-async function createTask() {
-  const title = titleInput.value.trim();
-  const estimatedPomodoros = Number(estimatedPomodorosInput.value);
-  if (title.trim() === "") {
-    showToast("Por favor, ingresa un título para la tarea.");
-    return;
-  }
-
-  if (
-    estimatedPomodorosInput.value.trim() === "" ||
-    Number.isNaN(estimatedPomodoros) ||
-    estimatedPomodoros <= 0
-  ) {
-    showToast("Por favor, ingresa un número válido de pomodoros estimados.");
-    return;
-  }
-
-  if (editingTaskId !== null) {
-    await fetch(API_URL + "/" + editingTaskId, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: title,
-        estimatedPomodoros: estimatedPomodoros,
-      }),
-    });
-    editingTaskId = null;
-    createBtn.textContent = "Crear tarea";
-  } else {
-    await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: title,
-        estimatedPomodoros: estimatedPomodoros,
-      }),
-    });
-  }
-
-  titleInput.value = "";
-  estimatedPomodorosInput.value = "";
-  loadTasks();
-}
 
 async function loadTasks() {
   const response = await fetch(API_URL);
@@ -116,7 +68,8 @@ async function loadTasks() {
 
   taskList.innerHTML = "";
 
-  tasks.forEach((task) => {
+  allTasks = tasks;
+  allTasks.forEach((task) => {
     const li = document.createElement("li");
     let statusTexto;
     if (task.status === "PENDING") statusTexto = "Pendiente";
@@ -178,7 +131,6 @@ async function selectTaskId(id) {
   await fetch("/api/timer/task/" + id, { method: "POST" });
   loadTasks();
 }
-
 function startEdit(task) {
   editingTaskId = task.id;
   titleInput.value = task.title;
@@ -193,6 +145,15 @@ async function deleteTask(id) {
   loadTasks();
 }
 
+taskSearch.addEventListener("input", () =>{
+  const texto = taskSearch.value.trim().toLowerCase();
+  const filtradas = allTasks.filter(t => t.title.toLowerCase().includes(texto));
+  renderTaskList(filtradas);
+  if(filtradas.length === 0){
+    document.getElementById("taskList").innerHTML = "<li class='empty'>No se encontraron tareas</li>";
+  }
+  });
+
 // === Timer ===
 function renderTimer(state) {
   document.getElementById("timer").textContent = formatTimer(
@@ -206,6 +167,52 @@ function renderTimer(state) {
   selectedTaskId = state.selectedTaskId;
   renderCycle(state.focusCountInCycle);
 }
+document.getElementById("createBtn").addEventListener("click", createTask);
+
+async function createTask() {
+  const title = titleInput.value.trim();
+  const estimatedPomodoros = Number(estimatedPomodorosInput.value);
+  if (title.trim() === "") {
+    showToast("Por favor, ingresa un título para la tarea.");
+    return;
+  }
+
+  if (
+    estimatedPomodorosInput.value.trim() === "" ||
+    Number.isNaN(estimatedPomodoros) ||
+    estimatedPomodoros <= 0
+  ) {
+    showToast("Por favor, ingresa un número válido de pomodoros estimados.");
+    return;
+  }
+
+  if (editingTaskId !== null) {
+    await fetch(API_URL + "/" + editingTaskId, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: title,
+        estimatedPomodoros: estimatedPomodoros,
+      }),
+    });
+    editingTaskId = null;
+    createBtn.textContent = "Crear tarea";
+  } else {
+    await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: title,
+        estimatedPomodoros: estimatedPomodoros,
+      }),
+    });
+  }
+
+  titleInput.value = "";
+  estimatedPomodorosInput.value = "";
+  loadTasks();
+}
+
 
 async function doAction(action) {
   await fetch("/api/timer/" + action, { method: "POST" });
@@ -221,17 +228,7 @@ document
   .getElementById("pauseTimerBtn")
   .addEventListener("click", () => doAction("pause"));
 
-function renderCycle(focusCount) {
-  const container = document.getElementById("cycle-dots");
-  container.innerHTML = "";
-  for (let i = 0; i < 4; i++) {
-    const dot = document.createElement("span");
-    dot.className = "dot" + (i < focusCount ? " filled" : "");
-    container.appendChild(dot);
-  }
-}
-
-// === WebSocket y fallback (polling) ===
+// --- WebSocket: el servidor empuja el estado cada segundo ---
 let ws = null;
 let wsConnected = false;
 let finishing = false;
@@ -300,7 +297,16 @@ function startApp() {
   setInterval(poll, 1000);
 }
 
-// === Sonido y notificaciones ===
+function renderCycle(focusCount) {
+  const container = document.getElementById("cycle-dots");
+  container.innerHTML = "";
+  for (let i = 0; i < 4; i++) {
+    const dot = document.createElement("span");
+    dot.className = "dot" + (i < focusCount ? " filled" : "");
+    container.appendChild(dot);
+  }
+}
+
 let audioCtx = null;
 
 function playBeep() {
@@ -329,7 +335,9 @@ function notify(message) {
   }
 }
 
-// === Estadísticas y sesiones ===
+
+// --- Session History ---
+
 async function loadTodayStats() {
   try {
     const response = await fetch("/api/sessions/today");
@@ -394,7 +402,6 @@ function loadSessions() {
   loadRecentSessions();
 }
 
-// === Autenticación ===
 function showAuth() {
   authOverlay.hidden = false;
   mainContent.hidden = true;
@@ -532,7 +539,6 @@ document
       });
   });
 
-// === Toast ===
 function showToast(message) {
   const toast = document.getElementById("toast");
   toast.textContent = message;
