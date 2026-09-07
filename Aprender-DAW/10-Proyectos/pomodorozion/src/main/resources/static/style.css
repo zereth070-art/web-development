@@ -138,6 +138,20 @@ section h2 {
   background-color: var(--amarillo-claro);
 }
 
+#taskSearch {
+  padding: 0.5rem 0.75rem;
+  border: 2px solid var(--verde-claro);
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+#taskSearch:focus {
+  border-color: var(--verde);
+}
+
 /* === Lista de tareas === */
 li {
   padding: 10px;

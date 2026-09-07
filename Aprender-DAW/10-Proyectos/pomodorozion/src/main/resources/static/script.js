@@ -1,13 +1,13 @@
 // === Estado global y referencias al DOM ===
 const titleInput = document.getElementById("titleInput");
-const estimatedPomodorosInput = document.getElementById(
-  "estimatedPomodorosInput",
-);
+const estimatedPomodorosInput = document.getElementById("estimatedPomodorosInput");
+const taskSearch = document.getElementById("taskSearch");
 const createBtn = document.getElementById("createBtn");
 const API_URL = "/api/tasks";
 let editingTaskId = null;
 let selectedTaskId = 0;
 let allTasks = [];
+
 
 // === Autenticación ===
 const authOverlay = document.getElementById("auth-overlay");
@@ -47,7 +47,7 @@ function formatDuration(totalSeconds) {
   }
   return minutes + "m";
 }
-// == Tareas (CRUD) ===
+// === Tareas (CRUD) ===
 function validateInput() {
   const title = titleInput.value.trim();
   const estimatedPomodoros = Number(estimatedPomodorosInput.value);
@@ -116,9 +116,11 @@ function renderTasks(filtradas) {
                 <button class="pomodoro-btn">
                    +1 Pomodoro
                 </button>
-                <button class="edit-btn">Editar</button>
-                <button class="delete-btn">Eliminar</button>
-                `;
+<button class="edit-btn">Editar</button>
+                 <button class="delete-btn">Eliminar</button>
+                 `;
+    li.dataset.status = task.status;
+    li.dataset.selected = task.id === selectedTaskId;
     taskList.appendChild(li);
   }
   }
