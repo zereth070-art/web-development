@@ -64,59 +64,8 @@ titleInput.addEventListener("input", validateInput);
 async function loadTasks() {
   const response = await fetch(API_URL);
   const tasks = await response.json();
-  const taskList = document.getElementById("taskList");
-
-  taskList.innerHTML = "";
-
   allTasks = tasks;
-  allTasks.forEach((task) => {
-    const li = document.createElement("li");
-    let statusTexto;
-    if (task.status === "PENDING") statusTexto = "Pendiente";
-    else if (task.status === "IN_PROGRESS") statusTexto = "En progreso";
-    else statusTexto = "Completada";
-
-    li.innerHTML = `
-                <div class ="task-title">${escapeHtml(task.title)}</div>
-                
-                <button class="select-btn">
-                   ${task.id === selectedTaskId ? "✓ Seleccionada" : "Seleccionar"}
-                </button>
-                
-                <div class="task-progress">
-                  ${task.completedPomodoros} / ${task.estimatedPomodoros} pomodoros
-                </div>
-
-                <div class="task-status">
-                  ${statusTexto}
-                </div>
-
-                <button class="pomodoro-btn">
-                   +1 Pomodoro
-                </button>
-                <button class="edit-btn">Editar</button>
-                <button class="delete-btn">Eliminar</button>
-                
-                `;
-
-    li.dataset.status = task.status;
-
-    const btn = li.querySelector(".pomodoro-btn");
-    const selectBtn = li.querySelector(".select-btn");
-    if (task.status === "COMPLETED") {
-      btn.disabled = true;
-    }
-
-    btn.addEventListener("click", () => completePomodoro(task.id));
-    selectBtn.addEventListener("click", () => selectTaskId(task.id));
-    const editBtn = li.querySelector(".edit-btn");
-    const deleteBtn = li.querySelector(".delete-btn");
-    editBtn.addEventListener("click", () => startEdit(task));
-    deleteBtn.addEventListener("click", () => deleteTask(task.id));
-
-    taskList.appendChild(li);
-    li.dataset.selected = task.id === selectedTaskId;
-  });
+  renderTasks(tasks);
 }
 
 async function completePomodoro(id) {
@@ -144,11 +93,40 @@ async function deleteTask(id) {
   await fetch(API_URL + "/" + id, { method: "DELETE" });
   loadTasks();
 }
+function renderTasks(filtradas) {
+  const taskList = document.getElementById("taskList");
+  taskList.innerHTML = "";
+  for(const task of filtradas) {
+    const li = document.createElement("li");
+    let statusTexto;
+    if (task.status === "PENDING") statusTexto = "Pendiente";
+    else if (task.status === "IN_PROGRESS") statusTexto = "En progreso";
+    else statusTexto = "Completada";
+    li.innerHTML = `
+                <div class ="task-title">${escapeHtml(task.title)}</div>
+                <button class="select-btn">
+                   ${task.id === selectedTaskId ? "✓ Seleccionada" : "Seleccionar"}
+                </button>
+                <div class="task-progress">
+                  ${task.completedPomodoros} / ${task.estimatedPomodoros} pomodoros
+                </div>
+                <div class="task-status">
+                  ${statusTexto}
+                </div>
+                <button class="pomodoro-btn">
+                   +1 Pomodoro
+                </button>
+                <button class="edit-btn">Editar</button>
+                <button class="delete-btn">Eliminar</button>
+                `;
+    taskList.appendChild(li);
+  }
+  }
 
 taskSearch.addEventListener("input", () =>{
   const texto = taskSearch.value.trim().toLowerCase();
   const filtradas = allTasks.filter(t => t.title.toLowerCase().includes(texto));
-  renderTaskList(filtradas);
+  renderTasks(filtradas);
   if(filtradas.length === 0){
     document.getElementById("taskList").innerHTML = "<li class='empty'>No se encontraron tareas</li>";
   }
