@@ -6,7 +6,7 @@ const createBtn = document.getElementById("createBtn");
 const API_URL = "/api/tasks";
 let editingTaskId = null;
 let selectedTaskId = 0;
-let allTasks = []; https://www.youtube.com/
+let allTasks = [];
 
 
 // === Autenticación ===
@@ -199,6 +199,8 @@ async function createTask() {
 
   titleInput.value = "";
   estimatedPomodorosInput.value = "";
+  createBtn.textContent = "Crear tarea";
+  validateInput();
   loadTasks();
 }
 
@@ -282,6 +284,8 @@ let appStarted = false;
 function startApp() {
   if (appStarted) return;
   appStarted = true;
+  loadTasks();
+  loadSessions();
   connectWs();
   setInterval(poll, 1000);
 }
