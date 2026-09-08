@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -102,8 +101,13 @@ public class AuthController {
     }
 
     @DeleteMapping("/account")
-    @Transactional
     public ResponseEntity<Void> deleteAccount(Authentication authentication, HttpServletRequest request, HttpServletResponse response) {
+        // sin sesion (peticion anonima) no hay cuenta que borrar -> 401,
+        // igual que hace /me. Sin esto daba 500 al intentar buscar al anonimo.
+        if (authentication == null || authentication instanceof AnonymousAuthenticationToken) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        }
+
         User user = userRepository.findByUsername(authentication.getName()).orElseThrow();
         authService.deleteAccount(user.getId());
         new SecurityContextLogoutHandler().logout(request, response, null); 

@@ -221,6 +221,13 @@ class HealthApiTest {
         }
 
         @Test
+        void borrarCuentaSinSesionEsRechazada() throws Exception {
+                // sin sesion no hay cuenta que borrar: debe ser 401, no un 500
+                mockMvc.perform(delete("/api/auth/account"))
+                                .andExpect(status().isUnauthorized());
+        }
+
+        @Test
         void borrarCuentaEnCascadaBorraTodoYLaSesion() throws Exception {
                 MockHttpSession session = new MockHttpSession();
                 mockMvc.perform(post("/api/auth/register")
