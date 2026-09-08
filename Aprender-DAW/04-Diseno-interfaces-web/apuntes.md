@@ -77,11 +77,60 @@ Hacer que el diseño **se adapte a cualquier pantalla** (móvil, tablet, escrito
   ```
 - La base del responsive: **porcentajes y max-width** en vez de anchos fijos absolutos.
 
+### Media queries (hecho de verdad en PomodoroZion)
+
+Una **media query** aplica reglas solo cuando se cumple una condición. Patrón "desktop-first":
+
+```css
+@media (max-width: 600px) {
+  /* reglas que solo aplican en pantallas de 600px o menos */
+}
+```
+
+Todo lo que está FUERA del bloque rige en escritorio; dentro del bloque, overrides para móvil.
+
+Lo que corregimos en la app (cada uno con su problema de fondo):
+
+1. **`#user-bar` (barra de usuario) estaba en `position: absolute`** pegada al título.
+   -> En móvil: `position: static; justify-content: center;` para que baje debajo del `h1`
+   en vez de pisarse. Importante: si el original lleva `transform: translateY(-50%)`,
+   hay que resetearlo con `transform: none`.
+
+2. **`.stats-grid` tenía 4 columnas fijas** -> en móvil a 2:
+   ```css
+   .stats-grid { grid-template-columns: repeat(2, 1fr); }
+   ```
+
+3. **Botones del timer se solapaban y no se centraban** (por un selector mal escrito:
+   `.timer-buttons button` cuando el contenedor era `.timer-buttons`). Además se repartían
+   mal el ancho. La solución limpia:
+   ```css
+   .timer-buttons button { flex: 1; min-width: 0; }
+   ```
+   `flex: 1` = los botones se reparten el ancho disponible **por igual** (y `min-width: 0`
+   permite que encojan sin desbordar). Resultado: Iniciar/Pausar/Reiniciar en fila centrada
+   incluso a 320px, sin `flex-wrap` ni solapes.
+
+4. **Antes el `button` genérico se estilaba para todos** -> mejor apuntar solo a los que
+   queremos: `.timer-buttons button` (no perjudica a botones de login/edit/delete).
+
+5. **`overflow-x: hidden` en `body`** -> evita scroll horizontal "fantasma" si algo se sale.
+   Y `html { -webkit-text-size-adjust: 100%; }` evita auto-zoom del iOS al tocar inputs.
+
+6. **Objetivo táctil**: en móvil los botones deben ser generosos (≈44px). Ajustamos padding
+   de `#logoutBtn` y reducimos el global de la app vía media query.
+
+7. **Márgenes de respiración**: en pantalla pequeña reducimos `header`, `section` y `main`
+   (padding/margen) para ganar espacio útil para el contenido.
+
+> Lección: **los selectores importan**. Un `#` vs `.` (o un falso `.x button` cuando la clase
+> es el contenedor) rompe todo el layout sin "dar error". El responsive no solo es "¿cabo?",
+> es verificar que cada botón/barrera/tarjeta se comporta en TODOS los tamaños (320, 375, 480).
+
 ### (Pendiente de profundizar en el curso)
 
 - **Flexbox** (disposición en fila/columna flexible).
 - **CSS Grid** (layout en rejilla de 2D).
-- **Media queries** (`@media (max-width: 600px) { ... }`) para ajustar en pantallas pequeñas.
 - Unidades relativas (`rem`, `em`, `vh`, `vw`).
 
 ## 7. Wireframes y prototipos
@@ -101,14 +150,15 @@ Hacer que el diseño **se adapte a cualquier pantalla** (móvil, tablet, escrito
 
 - [x] Rediseñar una página simple -> retoques a PomodoroZion.
 - [x] Crear un sistema de botones -> estilos de botones de la app.
+- [x] Diseño responsive de la app -> media query a 600px (módulo 04, reto completado).
 - [ ] Crear una tabla responsive (pendiente).
 - [ ] Diseñar un formulario largo (pendiente).
 - [ ] Mejorar accesibilidad de una interfaz (empezado con alt/contraste).
 
 ## Dudas pendientes
 
-- [ ] Flexbox y Grid (en curso en freeCodeCamp).
-- [ ] Media queries para que PomodoroZion se vea bien en móvil.
+- [x] Media queries para que PomodoroZion se vea bien en móvil -> hecho (ver sección 6).
+- [ ] Flexbox y Grid a fondo (en curso en freeCodeCamp).
 
 ## Repaso
 
