@@ -20,4 +20,7 @@ public interface PomodoroSessionsRepository extends JpaRepository<PomodoroSessio
           and s.userId = :userId
         """)
 long sumDurationSecondsByCompletedAtAfter(@Param("date") Instant date, @Param("userId") Long userId);
+
+    // Para la cascada del reto "borrar cuenta": borra las sesiones de un usuario
+    void deleteByUserId(Long userId);
 }

@@ -74,6 +74,20 @@ header h1 {
   background-color: var(--amarillo-claro);
 }
 
+#deleteAccountBtn {
+  background-color: #c0392b;
+  color: var(--blanco);
+  border: none;
+  border-radius: 8px;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+#deleteAccountBtn:hover {
+  background-color: #a93226;
+}
+
 footer {
   background-color: var(--verde);
   color: var(--amarillo);
@@ -533,7 +547,8 @@ section:nth-child(4) { animation-delay: 0.3s; }
     margin-top: 0.5rem;
   }
 
-  #logoutBtn {
+  #logoutBtn,
+  #deleteAccountBtn {
     padding: 0.6rem 1rem;
   }
 

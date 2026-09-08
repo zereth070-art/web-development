@@ -10,10 +10,18 @@ public class AuthService {
     
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TimerRepository timerRepository;
+    private final PomodoroSessionsRepository pomodoroSessionsRepository;
+    private final TaskRepository taskRepository;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+
+
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, TimerRepository timerRepository, PomodoroSessionsRepository pomodoroSessionsRepository, TaskRepository taskRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.timerRepository = timerRepository;
+        this.pomodoroSessionsRepository = pomodoroSessionsRepository;
+        this.taskRepository = taskRepository;
     }
 
     public UserDTO register(RegisterDTO dto) {
@@ -41,4 +49,14 @@ public class AuthService {
         }
     } 
     
+    public  void deleteAccount(Long userId) {
+        // Eliminar tareas del usuario
+        taskRepository.deleteByUserId(userId);
+        // Eliminar sesiones de pomodoro del usuario
+        pomodoroSessionsRepository.deleteByUserId(userId);
+        // Eliminar temporizador del usuario
+        timerRepository.deleteByUserId(userId);
+        // Eliminar usuario
+        userRepository.delete(userRepository.findById(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado")) );
+    }
 }

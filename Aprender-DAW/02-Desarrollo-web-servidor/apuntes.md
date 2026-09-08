@@ -1,8 +1,8 @@
 # Apuntes: Desarrollo web en servidor (Spring Boot)
 
 > Apuntes construidos a partir de la API de **PomodoroZion**:
-> Spring Boot 4 + Java + Spring Security, con login, registro, CRUD de tareas
-> y cambio de contraseña.
+> Spring Boot 4 + Java + Spring Security, con login, registro, CRUD de tareas,
+> cambio de contraseña y borrado de cuenta en cascada.
 
 ## 1. Servidores web y el modelo cliente-servidor
 
@@ -141,26 +141,84 @@ public void changePassword(User user, String old, String newPw) {
 4. Devuelve el `UserDTO` actualizado.
 5. Sin verificar antes, peticiones con contraseña vieja devuelven 401 y con la nueva 200.
 
-## 9. Logs (lado servidor)
+## 9. Reto: Borrar cuenta con borrado en cascada manual
+
+Endpoint: `DELETE /api/auth/account` -> `204 No Content`.
+Como las entidades guardan `Long userId` sin `@ManyToOne`, no hay cascada automática
+en la BD: **la integridad la garantiza el código**, borrando hijos antes que al padre.
+
+```java
+// AuthService
+@Transactional          // (2) una transacción para todo el bloque
+public void deleteAccount(Long userId) {
+    taskRepository.deleteByUserId(userId);          // hijo 1
+    pomodoroSessionsRepository.deleteByUserId(userId); // hijo 2
+    timerRepository.deleteByUserId(userId);         // hijo 3
+    userRepository.deleteById(userId);              // el padre, AL FINAL
+}
+```
+
+```java
+// AuthController
+@DeleteMapping("/account")
+public ResponseEntity<Void> deleteAccount(Authentication authentication,
+    HttpServletRequest request, HttpServletResponse response) {
+    User user = userRepository.findByUsername(authentication.getName()).orElseThrow();
+    authService.deleteAccount(user.getId());            // (1) borro la BD
+    new SecurityContextLogoutHandler().logout(request, response, null); // (3) sesión
+    return ResponseEntity.noContent().build();
+}
+```
+
+**Conceptos que dejó el reto:**
+
+1. **`deleteByUserId(...)`** — Spring Data genera el `DELETE ... WHERE user_id = ?`
+   solo con el nombre del método en el repositorio (no hay que escribir SQL).
+2. **`@Transactional`** — "JPA necesita un inicio y final claros, no algo genérico:
+   como dar pasos en un camino." Los borrados de JPA por nombre necesitan una
+   **transacción abierta**; sin ella sale el error críptico
+   *"No EntityManager with actual transaction available"* (salía como 500).
+   Además hace la cascada **atómica**: si un paso falla, se deshace todo.
+3. **Orden hijos → padre** — si borras al usuario antes, sus datos quedarían huérfanos
+   (y con FK reales, la BD directamente se negaría). El `id` ya lo tienes en la mano
+   como parámetro: el motivo no es "encontrarlo", es integridad.
+4. **Borrar la BD no es cerrar la sesión** — son dos planos: la cuenta vive en la BD,
+   la sesión vive en memoria del servidor + cookie del navegador. Tras borrar
+   la cuenta hay que matar la sesión con `SecurityContextLogoutHandler().logout(...)`.
+5. **Sesión muerta != cookie borrada** — la cookie sigue en el navegador pero es una
+   "llave muerta": el servidor ya no la reconoce y responde **403** en la siguiente
+   petición (no 401). Resultó que Spring Security no da 401 a sesiones inválidas.
+6. **Ownership del borrado** — el `userId` sale de `Authentication.getName()` (quiéres
+   tú, decídelo el servidor), nunca de un id que envíe el cliente: así no puedes
+   borrar la cuenta de otro.
+
+**Tests (TDD):** `borrarCuentaEnCascadaBorraTodoYLaSesion` (crea tarea + timer, borra,
+sesión muerta → 403, y ya no se puede volver a loguear) y `borrarCuentaNoTocaLosDatosDeOtro`
+(otro usuario queda intacto tras el borrado ajeno).
+
+## 10. Logs (lado servidor)
 
 Spring/Java emiten logs (info, warn, error). En producción se leen desde Render.
 Los `System.out` y los loggers de Spring ayudan a seguir qué petición entra y qué falla.
 
-## 10. Prácticas del temario y cómo se cubren
+## 11. Prácticas del temario y cómo se cubren
 
 - [x] API de tareas -> `TaskController` (CRUD de `/api/tasks`).
 - [x] CRUD de usuarios -> registro + autenticación de `User`.
 - [x] Login y registro -> `AuthController` (`/api/auth`).
 - [x] Panel privado -> cada usuario ve solo sus datos (filtro por `userId`).
 - [x] API conectada a base de datos -> JPA/hibernate + PostgreSQL/H2.
+- [x] **Reto: borrar cuenta con cascada manual** -> `DELETE /api/auth/account` +
+      `@Transactional` + cierre de sesión (ver sección 9).
 
 ## Dudas pendientes
 
-- [ ] Refactor a entidades con `@ManyToOne` y borrado en cascada (Reto).
+- [ ] Refactor a entidades con `@ManyToOne` y cascada de BD (reto de ampliación;
+      la cascada manual de la sección 9 ya funciona y es el patrón del reto hecho).
 - [ ] Autenticación "stateless" con JWT frente a sesiones de cookie.
 
 ## Repaso
 
-- [ ] Lo entiendo.
-- [ ] Lo he practicado (registro, login, CRUD, cambio de contraseña).
-- [ ] Podría explicarlo a otra persona.
+- [x] Lo entiendo (reto de borrado de cuenta escrito y explicado con tests en verde).
+- [x] Lo he practicado (registro, login, CRUD, cambio de contraseña, borrado en cascada).
+- [x] Podría explicarlo a otra persona (@Transactional, orden de cascada, cierre de sesión).

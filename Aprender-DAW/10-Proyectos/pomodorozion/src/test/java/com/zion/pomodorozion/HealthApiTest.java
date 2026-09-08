@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
@@ -217,6 +218,128 @@ class HealthApiTest {
                                 .session(session))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.username").value("paquitoElChocolatero3"));
+        }
+
+        @Test
+        void borrarCuentaEnCascadaBorraTodoYLaSesion() throws Exception {
+                MockHttpSession session = new MockHttpSession();
+                mockMvc.perform(post("/api/auth/register")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"username": "borrame01", "password": "123456"}
+                                                        """)
+                                .session(session))
+                                .andExpect(status().isCreated());
+
+                mockMvc.perform(post("/api/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"username": "borrame01", "password": "123456"}
+                                                        """)
+                                .session(session))
+                                .andExpect(status().isOk());
+
+                // creo datos del usuario (tareas y temporizador) para
+                // comprobar que la cascada los borra todos
+                mockMvc.perform(post("/api/tasks")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"title": "Tarea que debe morir", "estimatedPomodoros": 2}
+                                                        """)
+                                .session(session))
+                                .andExpect(status().isOk());
+
+                mockMvc.perform(post("/api/timer/start")
+                                .session(session))
+                                .andExpect(status().isOk());
+
+                mockMvc.perform(get("/api/tasks")
+                                .session(session))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$").isNotEmpty());
+
+                // borro la cuenta
+                mockMvc.perform(delete("/api/auth/account")
+                                .session(session))
+                                .andExpect(status().isNoContent());
+
+                // la sesion queda invalidada: /api/tasks es rechazada
+                // (Spring Security responde 403 Forbidden cuando no hay
+                // credenciales validas) y el usuario ya no puede volver a
+                // loguearse
+                mockMvc.perform(get("/api/tasks")
+                                .session(session))
+                                .andExpect(status().isForbidden());
+
+                mockMvc.perform(post("/api/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"username": "borrame01", "password": "123456"}
+                                                        """)
+                                .session(session))
+                                .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        void borrarCuentaNoTocaLosDatosDeOtro() throws Exception {
+                // usuario que va a borrarse
+                MockHttpSession sessionVilame = new MockHttpSession();
+                mockMvc.perform(post("/api/auth/register")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"username": "vilame01", "password": "123456"}
+                                                        """)
+                                .session(sessionVilame))
+                                .andExpect(status().isCreated());
+                mockMvc.perform(post("/api/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"username": "vilame01", "password": "123456"}
+                                                        """)
+                                .session(sessionVilame))
+                                .andExpect(status().isOk());
+                mockMvc.perform(post("/api/tasks")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"title": "Tarea de vilame", "estimatedPomodoros": 1}
+                                                        """)
+                                .session(sessionVilame))
+                                .andExpect(status().isOk());
+
+                // usuario que se queda
+                MockHttpSession sessionVecino = new MockHttpSession();
+                mockMvc.perform(post("/api/auth/register")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"username": "vecino01", "password": "123456"}
+                                                        """)
+                                .session(sessionVecino))
+                                .andExpect(status().isCreated());
+                mockMvc.perform(post("/api/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"username": "vecino01", "password": "123456"}
+                                                        """)
+                                .session(sessionVecino))
+                                .andExpect(status().isOk());
+                mockMvc.perform(post("/api/tasks")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {"title": "Tarea del vecino", "estimatedPomodoros": 1}
+                                                        """)
+                                .session(sessionVecino))
+                                .andExpect(status().isOk());
+
+                // borra vilame
+                mockMvc.perform(delete("/api/auth/account")
+                                .session(sessionVilame))
+                                .andExpect(status().isNoContent());
+
+                // el vecino sigue intacto y logueado
+                mockMvc.perform(get("/api/tasks")
+                                .session(sessionVecino))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$[0].title").value("Tarea del vecino"));
         }
 
 }

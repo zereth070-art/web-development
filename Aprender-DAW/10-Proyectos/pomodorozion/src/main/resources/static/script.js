@@ -433,6 +433,7 @@ function hideAuth(username) {
   mainContent.hidden = false;
   document.getElementById("user-name").textContent = username;
   document.getElementById("logoutBtn").hidden = false;
+  document.getElementById("deleteAccountBtn").hidden = false;
 }
 
 function switchTab(tab) {
@@ -514,6 +515,21 @@ registerForm.addEventListener("submit", async (e) => {
 
 document.getElementById("logoutBtn").addEventListener("click", async () => {
   await fetch("/api/auth/logout", { method: "POST" });
+  location.reload();
+});
+
+// Reto "borrar cuenta": dos confirmaciones (es irreversible), se llama al
+// endpoint y al volver la respuesta la sesión ya está muerta -> recargar
+// pone al usuario de nuevo en la pantalla de login.
+document.getElementById("deleteAccountBtn").addEventListener("click", async () => {
+  if (!confirm("¿Seguro que quieres borrar tu cuenta?")) return;
+  if (!confirm("Esta acción es irreversible: se borrarán tus tareas, tu historial y tu temporizador. ¿Continuar?")) return;
+
+  const res = await fetch("/api/auth/account", { method: "DELETE" });
+  if (!res.ok) {
+    showToast("No se pudo borrar la cuenta");
+    return;
+  }
   location.reload();
 });
 

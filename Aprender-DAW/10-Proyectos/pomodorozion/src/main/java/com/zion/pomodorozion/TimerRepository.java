@@ -10,4 +10,7 @@ public interface TimerRepository extends JpaRepository<Timer, Long> {
 
     Optional<Timer> findByUserId(Long userId);
 
+    // Para la cascada "borrar cuenta": elimina el temporizador del usuario
+    void deleteByUserId(Long userId);
+
 }

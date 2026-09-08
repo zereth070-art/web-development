@@ -10,4 +10,7 @@ public interface TaskRepository extends JpaRepository<Task, Long>{
 
     List<Task> findByUserId(Long userId);
 
+    // Spring Data genera el DELETE FROM task WHERE user_id = ? a partir del nombre
+    void deleteByUserId(Long userId);
+
 }
