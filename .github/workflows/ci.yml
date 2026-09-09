@@ -26,4 +26,4 @@ jobs:
           java-version: '25'
 
       - name: Ejecutar mvn test
-        run: ./mvnw test
+        run: sh ./mvnw test
