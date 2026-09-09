@@ -11,6 +11,10 @@ jobs:
     name: Ejecutar tests al push
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: Aprender-DAW/10-Proyectos/pomodorozion
+
     steps:
       - name: Descargar el codigo
         uses: actions/checkout@v4
