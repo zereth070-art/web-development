@@ -34,6 +34,37 @@ public class TaskController {
 > Lección aprendida: **una ruta clara y consistente por recurso** (`/api/tasks` para todo
 > el CRUD de tareas) en vez de rutas sueltas por acción. Evita enlaces rotos y duplicados.
 
+### Rutas dinámicas (`:id`) — Express como el Controller de Spring
+
+En Node con Express definimos rutas como en el Controller de Spring: URL + método
+HTTP + lo que se responde. La magia está en el **parámetro de ruta** `:id`:
+
+```js
+const tareas = [
+  { id: 1, titulo: "Estudiar Node", hecha: false },
+  { id: 2, titulo: "Pasear al perro", hecha: true },
+];
+
+app.get("/tareas", (req, res) => res.json(tareas));   // el listado
+
+app.get("/tareas/:id", (req, res) => {
+  const tarea = tareas.find(t => t.id === Number(req.params.id));  // :id llega como TEXTO
+  if (!tarea) {
+    return res.status(404).json({ error: "Tarea no encontrada" });  // 404 lo manda el SERVIDOR
+  }
+  res.json(tarea);
+});
+```
+
+- `req.params.id` → el valor de la ruta; llega como **string**, por eso `Number(...)`.
+- `find(...)` → buscar en el array (como en el JS del cliente).
+- `res.status(404).json(...)` → el **código del server** dice "no existe"; el navegador
+  NO inventa el 404. Un 404 automático (ruta mal escrita) es de Express; un 404 "no
+  encontrado en BD" es de nuestro código. Hay que distinguir los dos.
+- **El ciclo del desarrollo**: editar → matar el servidor viejo (Ctrl+C) → relanzar
+  (`node app.js`) → recargar. Los cambios NO aplican solos. Y si "no cambia nada",
+  sospechar **cache del navegador** (F12 → Disable cache → Network).
+
 ### API REST (buenas prácticas)
 
 - Usar **sustantivos en plural**: `/api/tasks` (no `/api/getTasks`).
