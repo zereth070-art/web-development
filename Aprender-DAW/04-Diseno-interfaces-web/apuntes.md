@@ -146,6 +146,37 @@ Lo que corregimos en la app (cada uno con su problema de fondo):
 - Contraste adecuado texto/fondo.
 - La accesibilidad no es un lujo: es para que pueda usarlo todo el mundo.
 
+### 8.1 Checklist que preguntan SIEMPRE (WCAG + SEO)
+
+**WCAG** (Pautas de Accesibilidad al Contenido Web, del W3C) — lo que debes saber:
+
+- Se organiza en **4 principios**: Perceptible, Operable, Comprensible, Robusto
+  (mnemónico: **POCR**).
+- **Niveles de conformidad: A, AA, ABB**. El estándar legal/común es **AA** (el título
+  completo: *WCAG 2.2 / AA* es lo que ve en webs dentro de la UE por la Directiva de
+  Accesibilidad).
+- Los puntos que más se ponen en examen:
+  - **Perceptible**: `alt` descriptivo, subtítulos en vídeos, contraste mínimo 4.5:1
+    para texto normal.
+  - **Operable**: todo navegable por **teclado** (sin ratón → foco visible móvil),
+    no temporizadores cortos, contenido no parpadea (epilepsia), encabezados de página
+    (h1, h2) que estructuran.
+  - **Comprensible**: idioma declarado (`lang="es"`), etiquetas visibles en formularios.
+  - **Robusto**: HTML semántico válido, ARIA solo cuando el HTML no basta.
+
+**SEO (posicionamiento) — lo mínimo que preguntan:**
+
+- **`<title>`** única por página (lo que se ve en la pestaña y en Google).
+- **HTML semántico**: `h1` por página, jerarquía `h1>h2>h3`, `<nav>`, `<main>`,
+  `<section>`, `<article>` — a los buscadores les encanta.
+- **Metadatos**: `<meta name="description">` (el texto gris del resultado en Google).
+- **Accesible = amigo de Google**: un `alt` bueno y contraste hacen que tu página
+  puntúe mejor también en SEO. Van de la mano.
+
+> Regla: en examen, si ves *"Percepcible/Operable/Comprensible/Robusto"* o
+> *"A / AA / AAA"* o el número *4.5:1* → estás ante WCAG. Si ves *"title, meta,
+> description, semántico"* → SEO. Ambos potencian tu página.
+
 ## 9. Prácticas del temario y cómo se cubren
 
 - [x] Rediseñar una página simple -> retoques a PomodoroZion.

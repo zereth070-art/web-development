@@ -68,6 +68,26 @@ const data = await res.json();
 - `await res.json()` transforma la respuesta a objeto JS.
 - La URL de la API suele estar centralizada (`const API_URL = "/api/tasks"`).
 
+### AJAX clásico (el temario pregunta esto) vs `fetch` (lo que usamos)
+
+- **AJAX** (Asynchronous JavaScript And XML) = la TÉCNICA de hablar con el servidor
+  **sin recargar la página**. No es un lenguaje: es el concepto. `fetch` ES AJAX.
+- Antes de `fetch`, el estándar era **`XMLHttpRequest`** (XHR). Mismo viaje, sintaxis fea:
+
+```js
+const xhr = new XMLHttpRequest();              // crear la petición
+xhr.open("GET", "/api/tasks");                 // configurar método + URL
+xhr.onload = () => { console.log(xhr.responseText); };  // qué hacer cuando llegue
+xhr.send();                                    // lanzar
+```
+
+- `fetch` = evolución moderna del mismo concepto: más corto, devuelve **promesas**
+  (`await`), y maneja JSON con `res.json()` en vez de `xhr.responseText`.
+- Reconocerlo en examen: si ves `new XMLHttpRequest()`, `onreadystatechange`,
+  `readyState`, `responseText`, `send()` → están hablando de **AJAX clásico/XHR**.
+- **Regla de oro:** el resultado del tema es saber que AMBOS hacen lo mismo
+  (petición al servidor desde JS, sin recarga) — `fetch` es el moderno, XHR el abuelo.
+
 ## 6. Estado en el cliente y "SPA"
 
 - **Estado** = los datos "vivos" de la interfaz (lista de tareas, usuario conectado...).
