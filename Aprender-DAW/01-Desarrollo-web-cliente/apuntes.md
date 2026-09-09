@@ -51,6 +51,31 @@ form.addEventListener("submit", async (e) => {
   pero el backend vuelve a validar.
 - Evitar recargar la página al enviar (`preventDefault`).
 
+### Mini-taller: expresiones regulares (lo que valida el email del registro)
+
+Una **expresión regular (regex)** es un patrón de texto. Se escribe entre `/ /`
+y deja que JS "detecte" lo que pides. Usamos `escapaHtml` con regex sin saberlo:
+`/&/g` busca todos los `&` — la `g` final = *global* (todas, no solo la primera).
+
+- `[a-z]` = UN carácter; `[0-9]` = una cifra; `[a-zA-Z]` = letra de cualquier caja.
+- **El patrón manda:** si el texto no tiene lo que pides, `match()` no inventa nada
+  (devuelve las pocas coincidencias que haya) y `replace()` no toca nada.
+- **`match()`** recolecta las coincidencias (array); **`replace()`** las cambia.
+- **`+`** = la pieza anterior **una o más** veces (exige mínimo 1: "campo con contenido").
+- **`*`** = **cero o más** veces (perdona la ausencia: "puede ir vacío").
+- **El patrón camina hasta la frontera:** `[a-z]+` se traga todas las letras seguidas
+  y se detiene en el primer carácter que no es letra (un `@`, un número...).
+
+Diferencia vista con `texto2 = "solo@ @fin @ @medio@medio"`:
+`/[a-z]+@[a-z]+/` → solo `medio@medio` (exige letras a ambos lados).
+`/[a-z]*@[a-z]*/` → hasta los `@` solitarios.
+
+El **email** se valida con `test()` — el corazón del chequeo del formulario:
+
+```js
+const valido = /^[a-z]+@[a-z]+$/.test("hola@prueba");   // true (^ inicio, $ final)
+```
+
 ## 5. Fetch y APIs (conectar frontend con backend)
 
 `fetch` hace peticiones HTTP desde el navegador y devuelve una promesa.
@@ -123,6 +148,32 @@ Así el navegador lo muestra como **texto**, no como HTML ejecutable.
 
 > Regla: **nunca inyectar datos del usuario en `innerHTML` sin escapar**.
 > Esto es seguridad de alto valor y difícil de "ver" — por eso es un gran logro.
+
+### El CICLO DE VIDA de un dato (lo que une fetch, el estado y XSS)
+
+No son 3 temas sueltos: es EL MISMO dato recorriendo un camino. El conducto que lo
+transporta (fetch) y la parada donde se pinta (renderTasks) son los 2 puntos frágiles.
+
+```
+[1] ENTRADA              [2] MOSTRAR                [3] RIESGO
+fetch / res.json()  →    estado + applySearch() →   innerHTML sin escapar
+(how the data arrives)   (how it lives / paints)    (si falla aquí → XSS)
+```
+
+La conexión killer: **la MISMA función que pinta es la que puede matarte.**
+`renderTasks()` es la que protagonizó el bug del buscador (pintaba todo sin respetar
+el filtro) *y* es la que mete `innerHTML` (donde un dato malvado se vuelve código).
+Por eso la regla vale doble: **un solo camino de pintado + desinfectar lo que toca
+la pantalla**.
+
+Mi analogía (de la ronda de repaso): fetch = pedir la pizza; mostrar = enseñar qué
+hay en la casa; XSS = pedir una pizza *con el ingrediente malvado* y que se la
+entreguen en casa de OTRA persona — y lo que ella ve/live vuelve a mis manos. 🍕🧨
+
+Extra que descubrí y vale preguntas de entrevista: "estado optimista" (actualizar la
+UI desde la memoria en vez de re-fetch) es real y se usa, pero duplica el estado
+(memoria + BD) y hay que revertir si el servidor dice que no. El re-fetch de BD que
+hacemos aquí mantiene a todas las pestañas sincronizadas "sin pagar complejidad".
 
 ## 8. Reto: notificaciones tipo "toast" y DRY
 
