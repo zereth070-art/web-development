@@ -101,6 +101,27 @@ public class CambiarPasswordDTO {
 - **Autorización** = confirmar QUÉ puedes hacer (solo tu propio usuario / tus propias tareas).
 - Spring Security intercepta las rutas y pide identificación.
 
+### Qué es una cookie y cómo viaja la sesión (el "quién eres" en cada request)
+
+La sesión NO viaja en el JSON: viaja en una **cookie**. En 2 pasos:
+
+1. El servidor loguea (valida usuario en BD) y en la **respuesta** manda
+   `Set-Cookie: JSESSIONID=ABC123`.
+2. El navegador **guarda esa cookie** y en CADA petición siguiente la manda sola
+   en la **cabecera del request**: `Cookie: JSESSIONID=ABC123`. Tu JS no hace nada;
+   el navegador lo rellena automáticamente.
+
+La **cookie** = el número de la caja. La **sesión** = la caja (con tus datos) que
+guarda el servidor. Por eso no se guarda la contraseña en cookie: el servidor te da
+solo "el número", y la caja está a salvo en el servidor.
+
+> La **cabecera** dice QUIÉN eres (y qué tipo de contenido manda). El **cuerpo**
+> dice QUÉ me mandas (el JSON). Un `GET` no lleva body — pero lleva igualmente la
+> cookie en la cabecera. El pase va en TODAS las peticiones, siempre.
+
+Si borras la cookie → la próxima petición llega sin pase → el servidor no te
+reconoce → 401/403 (deslogueado). Eso es lo que arreglamos en el reto de borrar cuenta.
+
 ### Gestión del usuario autenticado
 
 ```java
