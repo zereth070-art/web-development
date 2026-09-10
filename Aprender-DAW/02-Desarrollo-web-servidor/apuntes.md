@@ -263,6 +263,86 @@ Los `System.out` y los loggers de Spring ayudan a seguir qué petición entra y 
 - [x] **Reto: borrar cuenta con cascada manual** -> `DELETE /api/auth/account` +
       `@Transactional` + cierre de sesión (ver sección 9).
 
+## 12. La API en Node/Express + MongoDB (proyecto apuntes-api)
+
+Un backend real en Node replicando lo que Spring hace: el **CRUD de tareas** completo
+con Express + MongoDB. Es lo mismo que el `TaskController`, solo que en JS.
+
+### Cómo se arranca
+```bash
+npm install          # instala express + mongodb + mongodb-memory-server
+node app.js          # levanta Mongo (en memoria) + Express en el puerto 3000
+```
+- `db.js` levanta un **MongoDB en memoria** (`MongoMemoryServer`): no instala nada en
+  el PC, perfecto para practicar. Cada ejecucción es un Mongo NUEVO (puerto aleatorio).
+- Los datos viven en **memoria**: al apagar el proceso se borran (eso es la RAM).
+  Una BD real (Atlas) los guarda en disco y sobreviven a reinicios.
+
+### El CRUD (misma lógica que Spring)
+```js
+app.get("/tareas", async (req, res) => {          // leer todas
+  res.json(await tareas.find().toArray());        // find() = cursor, toArray() = materializar
+});
+
+app.get("/tareas/:id", async (req, res) => {      // leer una
+  const tarea = await tareas.findOne({ _id: new ObjectId(req.params.id) });
+  ...
+});
+
+app.post("/tareas", async (req, res) => {         // crear (con validación)
+  if (!req.body.titulo || typeof req.body.titulo !== "string") {
+    return res.status(400).json({ error: "El título es obligatorio y debe ser texto" });
+  }
+  const resultado = await tareas.insertOne(req.body);
+  res.status(201).json({ _id: resultado.insertedId, ...req.body });
+});
+
+app.put("/tareas/:id", async (req, res) => {      // actualizar
+  const r = await tareas.updateOne({ _id: new ObjectId(req.params.id) }, { $set: req.body });
+  if (r.matchedCount === 0) return res.status(404).json({ error: "No encontrada" });
+  res.json({ ok: true, actualizado: r.modifiedCount });
+});
+
+app.delete("/tareas/:id", async (req, res) => {   // borrar
+  const r = await tareas.deleteOne({ _id: new ObjectId(req.params.id) });
+  if (r.deletedCount === 0) return res.status(404).json({ error: "No encontrada" });
+  res.json({ ok: true, borrado: r.deletedCount });
+});
+```
+
+### Piezas clave (las que preguntan)
+- **`req.params.id`** = el `:id` de la URL, llega como **texto** -> `new ObjectId(...)` lo
+  convierte al `_id` real de Mongo (es la clave primaria que Mongo inventa y NO se repite).
+- **`_id` vs `id`**: el `_id` lo genera Mongo (garantiza unicidad); nuestro `id: 1` era
+  inventado (podía chocar). Por eso `GET/PUT/DELETE` necesitan `_id` y el `POST` no
+  (para crear, el id lo da el servidor; para tocar una, necesitas saber cuál).
+- **GET = leer** (nunca modifica), **POST = crear**, **PUT = actualizar**, **DELETE = borrar**.
+  La URL dice QUÉ recurso, el verbo dice QUÉ SE HACE con él.
+- **`express.json()`** (middleware): desenvuelve el `body` solo si el cliente manda
+  `Content-Type: application/json`. Sin esa cabecera -> `req.body` es `undefined` ->
+  `Cannot read properties of undefined` (el error cuenta la historia: mira la línea).
+- **Códigos**: 200 ok, 201 creado, 400 petición mala (validación), 404 no existe,
+  500 error interno. El 404 "no encontrado" lo manda NUESTRO código (no el navegador).
+- **`await`**: la BD está fuera del proceso -> el dato tarda -> `await` aguanta la
+  respuesta hasta que llega (por eso las rutas son `async`).
+- **`resultado.matchedCount`** (encontró la tarea?) vs **`modifiedCount`** (la cambió).
+
+### Errores de hoy que valen oro
+- **`ECONNREFUSED 127.0.0.1:27017`** = "no hay nadie en ese puerto": el servidor de BD
+  no está levantado (o no existe). No es bug del código, es que el servicio no corre.
+- **"X is not a constructor"** = import mal: `import { MongoClient } from "mongodb"`
+  (con `{}`) porque es un export con nombre; sin `{}` traes el default y no es constructor.
+- **Dos rutas iguales definidas** (`app.post` x2) = Express ejecuta la PRIMERA, la segunda
+  jamás se ve. Si "una ruta no hace lo que espero", contar cuántas veces está definida
+  (Ctrl+F) es el primer sospechoso.
+- **"El código no da error" ≠ funciona**: si falta `app.listen()`, el servidor existe
+  pero nunca abre puerto -> "conexión denegada". Sin `listen`, no hay nada atendiendo.
+- **Cambios que no se ven** = servidor viejo sin reiniciar (`Ctrl+C` + `node app.js`) o
+  cache del navegador. Editar sin reiniciar = hablar con un fantasma.
+- **Git**: `node_modules/` NUNCA se commitea (miles de archivos, binario de 781 MB). Se
+  ignora con `.gitignore`; si ya se subió, `git rm -r --cached node_modules` lo saca
+  del control de versiones sin borrar nada local.
+
 ## Dudas pendientes
 
 - [ ] Refactor a entidades con `@ManyToOne` y cascada de BD (reto de ampliación;
