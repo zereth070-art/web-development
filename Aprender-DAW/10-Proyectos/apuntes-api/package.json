@@ -1,0 +1,19 @@
+{
+  "name": "apuntes-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "type": "module",
+  "dependencies": {
+    "express": "^5.2.1",
+    "mongodb": "^7.6.0",
+    "mongodb-memory-server": "^11.2.0"
+  },
+  "allowScripts": {
+    "mongodb-memory-server@11.2.0": true
+  }
+}
