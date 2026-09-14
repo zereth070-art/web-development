@@ -9,3 +9,5 @@ Repositorio de estudio para Desarrollo de Aplicaciones Web: apuntes, prácticas 
 ## Proyectos
 
 - `pomodorozion`: aplicación de tareas con Pomodoro (Spring Boot, H2, Thymeleaf). En desarrollo.
+
+Hf.ityShjaFj2%5 contraseña gmail
