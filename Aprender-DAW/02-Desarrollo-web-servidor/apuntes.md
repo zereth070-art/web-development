@@ -343,11 +343,87 @@ app.delete("/tareas/:id", async (req, res) => {   // borrar
   ignora con `.gitignore`; si ya se subió, `git rm -r --cached node_modules` lo saca
   del control de versiones sin borrar nada local.
 
-## Dudas pendientes
+## 13. Proyecto real: pedidos de forros y camisas (grupo scout)
 
-- [ ] Refactor a entidades con `@ManyToOne` y cascada de BD (reto de ampliación;
-      la cascada manual de la sección 9 ya funciona y es el patrón del reto hecho).
-- [ ] Autenticación "stateless" con JWT frente a sesiones de cookie.
+Proyecto en `10-Proyectos/pedidos`, producción real: el cliente rellena un
+formulario web -> la API valida y guarda en MongoDB -> el sistema avisa por
+correo al cliente y a los encargados. Todo gratis (Render + MongoDB Atlas M0).
+
+### Arquitectura (una web, dos vistas)
+
+```
+[Formulario web  /] -> POST /api/pedidos -> [API valida] -> [MongoDB]
+                                                          |
+                               nodemailer: correo al cliente + correo a encargados
+[Panel admin  /admin] -> GET /api/pedidos (con clave) -> [lista pedidos]
+```
+
+- **`/`** = el formulario para el CLIENTE (público).
+- **`/admin`** = el panel para el ENCARGADO (protegido con una clave).
+- No son dos webs: es UN servidor Express con dos rutas y una BD compartida.
+
+### Los archivos que vas a escribir (y para qué sirve cada uno)
+
+- **`db.js`** — la conexión a Mongo. Lee `process.env.MONGODB_URI`:
+  - si la variable NO existe -> levanta `MongoMemoryServer` (memoria, desarrollo);
+  - si existe -> conecta a esa URI (Atlas, producción).
+  - Exporta la colección `pedidos`. (Hay que decidir si exportar la colección 
+    directamente o la conexión `cliente` + `db` — decisión de diseño tuya.)
+- **`app.js`** — el servidor Express: rutas, validación, estáticos, `listen`.
+- **`correos.js`** — el envío de correos con `nodemailer`. Sin SMTP configurado
+  lo simula por consola (para no quemar la cuenta en local = la lección del
+  phishing). Con SMTP, manda confirmación al cliente + aviso a encargados.
+- **`public/formulario.html`** — el formulario del cliente, con un
+  `<select>` de secciones, `<select>` de artículo (forro/camisa) y tallas.
+- **`public/panel.html`** — el panel del encargado que pide la clave y lista
+  los pedidos vía `GET /api/pedidos`.
+
+### Datos reales del catálogo (los tienes en tus Excels RS2526)
+
+- **Secciones**: Manada, Tropa, Escultas, Clan, Castores, Scouter.
+- **Forros**: tallas 8/10, 10/12, 12/14, S, M, L, XL.
+- **Camisas**: tallas 12-13, XS, S, M, L, XL, XXL.
+
+### Las reglas de validación (Ticket 3)
+
+- Nombre: obligatorio y texto.
+- Sección: tiene que estar en la lista.
+- Artículo: solo `forro` o `camisa`; la talla debe ser válida PARA ese artículo.
+- Cantidad: entero entre 1 y 99.
+- Correo del cliente: obligatorio y con formato válido.
+- Fallos -> `400` con mensaje claro. Éxito -> `201` con el `_id`.
+
+### Los códigos HTTP que ya usas (repaso rápido)
+
+- `400` = la petición del cliente está mal (valida ANTES de tocar la BD).
+- `401` = no autorizado (falla la clave del admin).
+- `201` = creado correctamente.
+- `200` = OK (listar pedidos, catálogo).
+- `404` = no existe el recurso.
+
+### Seguridad (lección que ya te pagaste)
+
+- La clave del admin y los datos del SMTP NUNCA van a fuego en el código:
+  se leen de `process.env` (variables de entorno: Render las deja poner en el
+  panel sin subirlas al repo).
+- El correo que tiene el cliente es con el que se le confirma: eso evita
+  mandar confirmaciones a direcciones inventadas.
+- `nodemailer` no cae en phishing si el envío sale de una cuenta/conexión
+  verificada y con límites de envío sanos. En local: mejor SIMULAR.
+
+### Checklist de arranque
+
+1. `db.js` -> `node db.js` no da error (o eliminando el `listen` del final).
+2. `app.js` -> `node app.js` -> abrir http://localhost:3000.
+3. Lanzar un POST por PowerShell (`Invoke-RestMethod`) y ver 201.
+4. Ver en `/admin` que el pedido aparece.
+5. Ver en la consola los correos simulados.
+6. (Producción) Variable `MONGODB_URI` + `SMTP_*` + `CLAVE_ADMIN` en Render.
+
+### Lección que deja hoy el jefe
+
+> "El que escribe el código aprende; el que solo lo lee, mira. Los apuntes
+> explican POR QUÉ. Tú escribes el CÓMO, y el porqué se te queda solo."
 
 ## Repaso
 
