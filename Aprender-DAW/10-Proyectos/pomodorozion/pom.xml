@@ -8,9 +8,9 @@
 		<version>4.1.0</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.zion</groupId>
-	<artifactId>pomodorozion</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<groupId>com.zion</groupId>    			<!-- dominio invertido, como un DNS (Servidor que convierte nombres de sitios web legibles por personas a direcciones IP numéricas que las máquinas entienden)-->
+	<artifactId>pomodorozion</artifactId>	<!-- nombre del proyecto -->
+	<version>0.0.1-SNAPSHOT</version>		<!-- SNAPSHOT = en desarrollo / si no lo tuviera seria una version final-->
 	<name>pomodorozion</name>
 	<description/>
 	<url/>

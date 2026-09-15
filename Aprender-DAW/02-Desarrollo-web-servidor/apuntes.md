@@ -263,11 +263,167 @@ Los `System.out` y los loggers de Spring ayudan a seguir qué petición entra y 
 - [x] **Reto: borrar cuenta con cascada manual** -> `DELETE /api/auth/account` +
       `@Transactional` + cierre de sesión (ver sección 9).
 
-## Dudas pendientes
+## 12. La API en Node/Express + MongoDB (proyecto apuntes-api)
 
-- [ ] Refactor a entidades con `@ManyToOne` y cascada de BD (reto de ampliación;
-      la cascada manual de la sección 9 ya funciona y es el patrón del reto hecho).
-- [ ] Autenticación "stateless" con JWT frente a sesiones de cookie.
+Un backend real en Node replicando lo que Spring hace: el **CRUD de tareas** completo
+con Express + MongoDB. Es lo mismo que el `TaskController`, solo que en JS.
+
+### Cómo se arranca
+```bash
+npm install          # instala express + mongodb + mongodb-memory-server
+node app.js          # levanta Mongo (en memoria) + Express en el puerto 3000
+```
+- `db.js` levanta un **MongoDB en memoria** (`MongoMemoryServer`): no instala nada en
+  el PC, perfecto para practicar. Cada ejecucción es un Mongo NUEVO (puerto aleatorio).
+- Los datos viven en **memoria**: al apagar el proceso se borran (eso es la RAM).
+  Una BD real (Atlas) los guarda en disco y sobreviven a reinicios.
+
+### El CRUD (misma lógica que Spring)
+```js
+app.get("/tareas", async (req, res) => {          // leer todas
+  res.json(await tareas.find().toArray());        // find() = cursor, toArray() = materializar
+});
+
+app.get("/tareas/:id", async (req, res) => {      // leer una
+  const tarea = await tareas.findOne({ _id: new ObjectId(req.params.id) });
+  ...
+});
+
+app.post("/tareas", async (req, res) => {         // crear (con validación)
+  if (!req.body.titulo || typeof req.body.titulo !== "string") {
+    return res.status(400).json({ error: "El título es obligatorio y debe ser texto" });
+  }
+  const resultado = await tareas.insertOne(req.body);
+  res.status(201).json({ _id: resultado.insertedId, ...req.body });
+});
+
+app.put("/tareas/:id", async (req, res) => {      // actualizar
+  const r = await tareas.updateOne({ _id: new ObjectId(req.params.id) }, { $set: req.body });
+  if (r.matchedCount === 0) return res.status(404).json({ error: "No encontrada" });
+  res.json({ ok: true, actualizado: r.modifiedCount });
+});
+
+app.delete("/tareas/:id", async (req, res) => {   // borrar
+  const r = await tareas.deleteOne({ _id: new ObjectId(req.params.id) });
+  if (r.deletedCount === 0) return res.status(404).json({ error: "No encontrada" });
+  res.json({ ok: true, borrado: r.deletedCount });
+});
+```
+
+### Piezas clave (las que preguntan)
+- **`req.params.id`** = el `:id` de la URL, llega como **texto** -> `new ObjectId(...)` lo
+  convierte al `_id` real de Mongo (es la clave primaria que Mongo inventa y NO se repite).
+- **`_id` vs `id`**: el `_id` lo genera Mongo (garantiza unicidad); nuestro `id: 1` era
+  inventado (podía chocar). Por eso `GET/PUT/DELETE` necesitan `_id` y el `POST` no
+  (para crear, el id lo da el servidor; para tocar una, necesitas saber cuál).
+- **GET = leer** (nunca modifica), **POST = crear**, **PUT = actualizar**, **DELETE = borrar**.
+  La URL dice QUÉ recurso, el verbo dice QUÉ SE HACE con él.
+- **`express.json()`** (middleware): desenvuelve el `body` solo si el cliente manda
+  `Content-Type: application/json`. Sin esa cabecera -> `req.body` es `undefined` ->
+  `Cannot read properties of undefined` (el error cuenta la historia: mira la línea).
+- **Códigos**: 200 ok, 201 creado, 400 petición mala (validación), 404 no existe,
+  500 error interno. El 404 "no encontrado" lo manda NUESTRO código (no el navegador).
+- **`await`**: la BD está fuera del proceso -> el dato tarda -> `await` aguanta la
+  respuesta hasta que llega (por eso las rutas son `async`).
+- **`resultado.matchedCount`** (encontró la tarea?) vs **`modifiedCount`** (la cambió).
+
+### Errores de hoy que valen oro
+- **`ECONNREFUSED 127.0.0.1:27017`** = "no hay nadie en ese puerto": el servidor de BD
+  no está levantado (o no existe). No es bug del código, es que el servicio no corre.
+- **"X is not a constructor"** = import mal: `import { MongoClient } from "mongodb"`
+  (con `{}`) porque es un export con nombre; sin `{}` traes el default y no es constructor.
+- **Dos rutas iguales definidas** (`app.post` x2) = Express ejecuta la PRIMERA, la segunda
+  jamás se ve. Si "una ruta no hace lo que espero", contar cuántas veces está definida
+  (Ctrl+F) es el primer sospechoso.
+- **"El código no da error" ≠ funciona**: si falta `app.listen()`, el servidor existe
+  pero nunca abre puerto -> "conexión denegada". Sin `listen`, no hay nada atendiendo.
+- **Cambios que no se ven** = servidor viejo sin reiniciar (`Ctrl+C` + `node app.js`) o
+  cache del navegador. Editar sin reiniciar = hablar con un fantasma.
+- **Git**: `node_modules/` NUNCA se commitea (miles de archivos, binario de 781 MB). Se
+  ignora con `.gitignore`; si ya se subió, `git rm -r --cached node_modules` lo saca
+  del control de versiones sin borrar nada local.
+
+## 13. Proyecto real: pedidos de forros y camisas (grupo scout)
+
+Proyecto en `10-Proyectos/pedidos`, producción real: el cliente rellena un
+formulario web -> la API valida y guarda en MongoDB -> el sistema avisa por
+correo al cliente y a los encargados. Todo gratis (Render + MongoDB Atlas M0).
+
+### Arquitectura (una web, dos vistas)
+
+```
+[Formulario web  /] -> POST /api/pedidos -> [API valida] -> [MongoDB]
+                                                          |
+                               nodemailer: correo al cliente + correo a encargados
+[Panel admin  /admin] -> GET /api/pedidos (con clave) -> [lista pedidos]
+```
+
+- **`/`** = el formulario para el CLIENTE (público).
+- **`/admin`** = el panel para el ENCARGADO (protegido con una clave).
+- No son dos webs: es UN servidor Express con dos rutas y una BD compartida.
+
+### Los archivos que vas a escribir (y para qué sirve cada uno)
+
+- **`db.js`** — la conexión a Mongo. Lee `process.env.MONGODB_URI`:
+  - si la variable NO existe -> levanta `MongoMemoryServer` (memoria, desarrollo);
+  - si existe -> conecta a esa URI (Atlas, producción).
+  - Exporta la colección `pedidos`. (Hay que decidir si exportar la colección 
+    directamente o la conexión `cliente` + `db` — decisión de diseño tuya.)
+- **`app.js`** — el servidor Express: rutas, validación, estáticos, `listen`.
+- **`correos.js`** — el envío de correos con `nodemailer`. Sin SMTP configurado
+  lo simula por consola (para no quemar la cuenta en local = la lección del
+  phishing). Con SMTP, manda confirmación al cliente + aviso a encargados.
+- **`public/formulario.html`** — el formulario del cliente, con un
+  `<select>` de secciones, `<select>` de artículo (forro/camisa) y tallas.
+- **`public/panel.html`** — el panel del encargado que pide la clave y lista
+  los pedidos vía `GET /api/pedidos`.
+
+### Datos reales del catálogo (los tienes en tus Excels RS2526)
+
+- **Secciones**: Manada, Tropa, Escultas, Clan, Castores, Scouter.
+- **Forros**: tallas 8/10, 10/12, 12/14, S, M, L, XL.
+- **Camisas**: tallas 12-13, XS, S, M, L, XL, XXL.
+
+### Las reglas de validación (Ticket 3)
+
+- Nombre: obligatorio y texto.
+- Sección: tiene que estar en la lista.
+- Artículo: solo `forro` o `camisa`; la talla debe ser válida PARA ese artículo.
+- Cantidad: entero entre 1 y 99.
+- Correo del cliente: obligatorio y con formato válido.
+- Fallos -> `400` con mensaje claro. Éxito -> `201` con el `_id`.
+
+### Los códigos HTTP que ya usas (repaso rápido)
+
+- `400` = la petición del cliente está mal (valida ANTES de tocar la BD).
+- `401` = no autorizado (falla la clave del admin).
+- `201` = creado correctamente.
+- `200` = OK (listar pedidos, catálogo).
+- `404` = no existe el recurso.
+
+### Seguridad (lección que ya te pagaste)
+
+- La clave del admin y los datos del SMTP NUNCA van a fuego en el código:
+  se leen de `process.env` (variables de entorno: Render las deja poner en el
+  panel sin subirlas al repo).
+- El correo que tiene el cliente es con el que se le confirma: eso evita
+  mandar confirmaciones a direcciones inventadas.
+- `nodemailer` no cae en phishing si el envío sale de una cuenta/conexión
+  verificada y con límites de envío sanos. En local: mejor SIMULAR.
+
+### Checklist de arranque
+
+1. `db.js` -> `node db.js` no da error (o eliminando el `listen` del final).
+2. `app.js` -> `node app.js` -> abrir http://localhost:3000.
+3. Lanzar un POST por PowerShell (`Invoke-RestMethod`) y ver 201.
+4. Ver en `/admin` que el pedido aparece.
+5. Ver en la consola los correos simulados.
+6. (Producción) Variable `MONGODB_URI` + `SMTP_*` + `CLAVE_ADMIN` en Render.
+
+### Lección que deja hoy el jefe
+
+> "El que escribe el código aprende; el que solo lo lee, mira. Los apuntes
+> explican POR QUÉ. Tú escribes el CÓMO, y el porqué se te queda solo."
 
 ## Repaso
 
