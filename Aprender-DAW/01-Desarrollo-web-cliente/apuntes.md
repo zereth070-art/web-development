@@ -280,7 +280,86 @@ A destacar de cara al temario:
 - Contraste de color y feedback claro de errores (el toast da feedback audible/visible).
 - `_blank` en enlaces externos.
 
-## 12. Prácticas del temario y cómo se cubren
+## 12. React: arquitectura SPA y estructura con Vite (apuntes de clase)
+
+> Este trimestre se recrea **PcComponentes con React**. JS vanilla (DOM, fetch, SPA) sigue
+> valiendo de fundamento; esto es el salto a componentes.
+
+### Arquitectura: SPA / CSR (Client Side Rendering)
+
+```
+cliente web ────────────────►  servidor NODEJS
+                                   │
+                                   ▼
+                        proyecto servicios RESTful / API REST
+                                   │
+                                   ▼
+                             servidor BD MongoDB
+```
+
+- **Una única descarga al principio** (cuando se pide la URL inicial): `app-REACT` recibe
+  el **bundle** (código JS + HTML) y ya se ejecuta en el navegador.
+- **A partir de ahí se interactúa en el cliente**: nada de pedirle páginas al servidor.
+- ¿¿Persistencia de datos?? El **storage del navegador no sirve** (se limpia). Para
+  intercambiar datos puntuales hace falta un servidor: **API REST / RESTful**.
+
+> Lección que ya te pagaste en pedidos: *en memoria se muere*. Aquí el profe te da la
+> teoría: la data no vive en el cliente, vive en el servidor (Mongo).
+
+### Crear un proyecto React con Vite
+
+```bash
+npm create vite@latest my-app -- --template react
+```
+
+Arranca un servidor de desarrollo en el puerto **5173** (`http://localhost:5173`).
+
+```
+directorios:
+  - public   contenido estático del portal (imágenes, js de paquetes externos, ...)
+  - src      contenido de la app React (ficheros de componentes .jsx)
+```
+
+### Estructura por defecto
+
+- **`src/main.jsx`** — fichero de entrada principal de la app:
+
+```jsx
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import './index.css'
+import App from './App.jsx'
+
+createRoot(document.getElementById('root'))   // monta la jerarquía (árbol) de componentes
+  .render(
+    <StrictMode>   // 1º componente a insertar en <div id="root">
+      <App />      // 2º componente hijo
+    </StrictMode>,
+  )
+```
+
+- **`src/App.jsx`** — componente inicial; usa hooks como `useState`:
+
+```jsx
+function App() {
+  const [count, setCount] = useState(0)
+  return (
+    <>
+      <button type="button" onClick={() => setCount((count) => count + 1)}>
+        Count is {count}
+      </button>
+    </>
+  )
+}
+export default App
+```
+
+- **`index.html`** — único fichero HTML (SPA).
+
+> El **bundle** de Vite es el mismo concepto del que habla **0614 Despliegue**: construir y
+> servir estáticos. Lo estás viendo en dos asignaturas.
+
+## 13. Prácticas del temario y cómo se cubren
 
 - [x] Lista de tareas -> CRUD de tareas en `script.js`.
 - [x] Consumo de API -> `fetch` a `/api/tasks` y `/api/auth`.

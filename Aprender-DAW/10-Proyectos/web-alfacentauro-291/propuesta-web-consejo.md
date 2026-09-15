@@ -36,7 +36,7 @@ Es una zona con **usuario y contraseña** con tres perfiles:
 
 ### Cómo se entra
 
-- **Nadie se registra solo.** Las cuentas de las familias las crea el **encargado de web** (con el visto bueno de Coordinación): se usa el correo del padre/madre como usuario y se genera una **contraseña** que el encargado comunica a la familia.
+- **Nadie se registra solo.** Las cuentas de las familias las crea el encargado de web con el visto bueno de Coordinación. La familia recibe un correo de activación para establecer su propia contraseña.
 - Quien no tiene cuenta **no existe en el portal** (no puede entrar un "niño no scout"): si una familia se va, el encargado le desactiva la cuenta.
 - Los **scouters y coordi** también tienen su propia cuenta, creada por el encargado de web.
 

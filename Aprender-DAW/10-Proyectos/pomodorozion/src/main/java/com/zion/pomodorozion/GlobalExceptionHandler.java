@@ -12,7 +12,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice //escucha las excepciones lanzadas por todos los controladores, sin tocar su código. Spring lo detecta automáticamente al estar en el paquete base
 public class GlobalExceptionHandler {
@@ -38,13 +37,6 @@ public class GlobalExceptionHandler {
     HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
     return build(status, ex.getReason(), null);
 }
-
-    @ExceptionHandler(NoResourceFoundException.class)
-                                //URL que no existe (p. ej. /api/timer antes de tener el controlador).
-                                //Sin este caso, el catch-all lo convertiria en un 500 injusto.
-    public ResponseEntity<Map<String, Object>> handleNotFound(NoResourceFoundException ex) {
-        return build(HttpStatus.NOT_FOUND, "Recurso no encontrado", null);
-    }
 
     @ExceptionHandler(Exception.class)         //cualquier error no previsto se traduce en 500 sin filtrar la traza interna al cliente.
     public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
