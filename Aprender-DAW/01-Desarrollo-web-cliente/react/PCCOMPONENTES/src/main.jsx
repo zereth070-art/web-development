@@ -1,5 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+
+import Registro from './Componentes/zonaCliente/registro/Registro.jsx'
 //import './index.css'
 // import App from './App.jsx'
 import HolaMundo from './holamundo.jsx'
@@ -8,6 +10,7 @@ createRoot(document.getElementById('root')).render(
 //dice a react que monte la jerarquia(arbol) de componentes dentro del <div id='root'...>
   <StrictMode> 
     <HolaMundo />
+    <Registro />
   </StrictMode>,
 )
 
