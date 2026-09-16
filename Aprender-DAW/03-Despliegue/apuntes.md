@@ -127,3 +127,7 @@ Cuando una credencial se expone, se debe rotar:
 - [ ] Lo entiendo.
 - [ ] Lo he practicado (despliegue real de PomodoroZion).
 - [ ] Podría explicarlo a otra persona.
+
+
+# APACHE2
+si no tenemos enlace directo a norma, la norma no funciona
