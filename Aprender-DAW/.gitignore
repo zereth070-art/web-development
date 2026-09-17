@@ -1,0 +1,5 @@
+# Tomcat (deploy local de IntelliJ)
+11-Recursos/apache-tomcat-11.0.26/webapps/demo_war/
+
+# Node
+node_modules/
