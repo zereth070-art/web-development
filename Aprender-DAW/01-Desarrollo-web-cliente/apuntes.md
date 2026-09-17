@@ -378,3 +378,86 @@ export default App
 - [ ] Lo entiendo.
 - [ ] Lo he practicado (frontend real de PomodoroZion + retos XSS/toast/buscador/sesiones).
 - [ ] Podría explicarlo a otra persona.
+
+## 14. Componentes React y Virtual DOM (apuntes de clase, pasados a limpio)
+
+### Virtual DOM (diffing / reconciliación)
+
+React construye **en memoria** un DOM virtual a partir del DOM real. ¿Para qué? Para
+evitar el **refresco/repintado continuo** que haría el motor del navegador ante
+cualquier cambio del DOM desde el código (muy ineficaz).
+
+> Aclaración: el que pinta es el motor de renderizado del navegador. Cada vez que
+> tocas el DOM real, el navegador recalcula estilos, layout y repinta: eso es lo
+> caro que se quiere evitar.
+
+A partir de los nodos del DOM real, se mapea cada tag/nodo a un **objeto JS puro**:
+eso son los **COMPONENTES de React**. El resultado es el **DOM virtual** (un árbol
+en memoria, rápido de crear y de comparar).
+
+Si hay un cambio (por acción del usuario y sus eventos) en alguno de esos componentes:
+
+1. React **compara en el DOM virtual los componentes antiguos con los nuevos**
+   ← busca *diferencias* (**DIFFING**).
+2. **Modifica en el DOM virtual solo los objetos que han cambiado**, no todo el
+   DOM (que sería lo que haría el navegador). *(El profe lo llama "REFACTORING",
+   aunque el nombre técnico real es **RECONCILIACIÓN** (reconciliation). No
+   confundir con "refactorizar código", que es otra cosa: reorganizar código sin
+   cambiar su comportamiento.)*
+3. Una vez actualizado el DOM virtual, **lo vuelca al DOM real** y el navegador pinta.
+
+> Matiz fino: en realidad React no edita el DOM virtual "viejo": construye un árbol
+> nuevo con el estado nuevo y el **diffing** calcula el conjunto mínimo de cambios
+> que aplicar en el DOM real. Para clase basta con el concepto del profe.
+
+**Ventajas:**
+
+- **Rapidez**: no se actualiza continuamente todo el DOM.
+- **Eficacia**: no repites nodos de la página; creas componentes reutilizables.
+- El diffing **establece prioridades** al aplicar los cambios de los componentes
+  modificados para que el usuario tenga **sensación de inmediatez**.
+
+> Eso de "prioridades" en React moderno se llama *concurrent features* / suspensión.
+> A nivel de curso, quédate con la idea: React decide qué actualizar primero para
+> que la interfaz responda rápido.
+
+### Componentes React: reglas
+
+- Son la **unidad básica** de trabajo: un **fichero con extensión `.jsx`** (JS + HTML).
+- Las primeras líneas son las **importaciones** de recursos necesarios:
+
+```jsx
+import { useState } from 'react'        // del paquete react
+import './Registro.css'                 // estilos del componente
+```
+
+- Un componente es una **función JS** y **SIEMPRE empieza en MAYÚSCULA**;
+  si no, React no lo reconoce (`<Registro />` funciona, `<registro />` no).
+
+```jsx
+function NombreComponente(props) {      // puede recibir props (propiedades)
+  // código JS
+
+  return <div>...</div>                 // devuelve UN único nodo HTML (o un fragment)
+}
+
+export default NombreComponente         // lo hace reutilizable
+```
+
+**Reglas de oro:**
+
+1. Nombre en **Mayúscula** (obligatorio).
+2. Devuelve **SIEMPRE un único nodo raíz**... o un **fragmento** `<> ... </>`.
+
+> Con React moderno (16.2+) un componente puede devolver varios nodos si los
+> envuelves en un **fragment** `<>...</>`, un "nodo invisible" que no crea etiqueta
+> real. Es la razón del `<>` al principio de `Registro.jsx`.
+
+3. Las **props** son los datos que el padre pasa al hijo (solo lectura).
+4. `export default` hace el componente **reutilizable/importable** en otros ficheros.
+
+### Conexión con PomodoroZion
+
+El "renderTasks" y el repintado manual con `innerHTML` eran justo lo que React
+automatiza con el diffing: tú declaras cómo debe verse la UI según el estado y
+React aplica solo los cambios. Mismo concepto, sin "pintar a mano".
