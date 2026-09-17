@@ -1,7 +1,7 @@
 import './Registro.css';              // estilos propios del componente
 import { useState } from 'react';     // trae el hook useState (estado + re-render) de React
 import { validateEmail } from '../../../utils/validaciones';
-function Registro() {
+function Registro( {onCambiarPantalla}) {
      // —— ESTADO DEL FORMULARIO ——
      // Cada campo tiene su useState: [valorActual, funcionQueLoCambia]
      // valorActual  -> para LEER  (va en value del input)
@@ -43,10 +43,10 @@ function Registro() {
 
      if (exito) {
           return (
-               <di className="exito">
+               <div className="exito">
                     <h2>Cuenta creada con exito!!</h2>
                     <p>Ya puedes inciar sesion</p>
-               </di>
+               </div>
 
           );
      }
@@ -57,42 +57,51 @@ function Registro() {
           <form onSubmit={handleSubmit} noValidate>
 
                {/* INPUT CONTROLADO: value lee del estado y onChange lo actualiza; React repinta solo */}
-               <input
-                    type='text'
-                    placeholder='Nombre'
-                    value={nombre}
-                    onChange={(e) => setNombre(e.target.value)}
-
-               />
-               {errores.nombre && <p className="error">{errores.nombre}</p>}
-               <input
-                    type='email'
-                    placeholder='E-mail*'
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-               />
-               {errores.email && <p className="error">{errores.email}</p>}
-               <input
-                    type='password'
-                    placeholder='Contraseña*'
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-
-               />
-               {errores.password && <p className="error">{errores.password}</p>}
-               <input
-                    type='password'
-                    placeholder='Repetir contraseña*'
-                    value={repetir}
-                    onChange={(e) => setRepetir(e.target.value)}
-
-               />
+           <input
+    type='text'
+    placeholder='Nombre'
+    value={nombre}
+    onChange={(e) => {
+        setNombre(e.target.value);
+        setErrores({ ...errores, nombre: undefined });
+    }}
+/>
+{errores.nombre && <p className="error">{errores.nombre}</p>}<input
+    type='email'
+    placeholder='E-mail*'
+    value={email}
+    onChange={(e) => {
+        setEmail(e.target.value);
+        setErrores({ ...errores, email: undefined });
+    }}
+/>
+{errores.email && <p className="error">{errores.email}</p>}
+              <input
+    type='password'
+    placeholder='Contraseña*'
+    value={password}
+    onChange={(e) => {
+        setPassword(e.target.value);
+        setErrores({ ...errores, password: undefined });
+    }}
+/>
+{errores.password && <p className="error">{errores.password}</p>}<input
+    type='password'
+    placeholder='Repetir contraseña*'
+    value={repetir}
+    onChange={(e) => {
+        setRepetir(e.target.value);
+        setErrores({ ...errores, repetir: undefined });
+    }}
+/>
+{errores.repetir && <p className="error">{errores.repetir}</p>}
                <p>He leido y aceptado la <a href="/politica-privacidad">politica de privacidad</a></p>
                <input type="checkbox" />
                <p>Recibir <strong>descuentos exclusivos</strong>, novedades y tendencias por e-mail. Me puedo dar de baja desde mi panel</p>
                <input type="checkbox" />
                {/* type="submit" -> dispara el onSubmit del form */}
                <button type='submit'>Crear cuenta</button>
+               <p>¿Ya tienes cuenta? <button type='button' onClick={ onCambiarPantalla}>Iniciar sesión</button> </p>
 
           </form>
      );

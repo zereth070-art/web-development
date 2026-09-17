@@ -461,3 +461,209 @@ export default NombreComponente         // lo hace reutilizable
 El "renderTasks" y el repintado manual con `innerHTML` eran justo lo que React
 automatiza con el diffing: tú declaras cómo debe verse la UI según el estado y
 React aplica solo los cambios. Mismo concepto, sin "pintar a mano".
+
+## 15. Práctica: Login/Registro con React (estado, props y validación)
+
+Mini-práctica hecha en clase: recrear el formulario de login y registro de
+PcComponentes como componentes React, con validación y navegación entre pantallas.
+
+### `useState` a fondo (la "caja" que vigila React)
+
+`useState` **no comprueba nada**. Es una "caja" que React vigila y que te devuelve
+una pareja:
+
+```jsx
+const [valorActual, funcionQueLoCambia] = useState(estadoInicial);
+```
+
+- `valorActual` → para **leer** el valor (va en el `value` del input).
+- `funcionQueLoCambia` → **la única forma** de cambiarlo.
+
+Cuando llamas al setter (ej. `setExito(true)`):
+
+1. React se entera de que algo cambió.
+2. React **vuelve a ejecutar tu función-componente** (re-render).
+3. Compara el árbol viejo y el nuevo (diffing) y **repinta solo lo que cambió**.
+
+> **Por qué NO sirve `exito = true`:** React no vigila variables; solo se entera
+> cuando llamas a la función del setter. Además, con `const` reasignar lanza error.
+
+> **Regla de los hooks:** todos los `useState` van SIEMPRE arriba del componente,
+> antes de cualquier `return`. Si un `return` condicionado (ej. `if (exito) return`)
+> va delante de un hook, React pierde la cuenta de sus hooks y lanza el error de
+> "render inconsistente". Los `return` condicionados van **después** de todos los hooks.
+
+### Props y "levantar el estado" (lifting state up)
+
+Solo se ve una pantalla (login o registro), decidida por un estado que vive en el
+**padre común**, `App.jsx`. Los hijos **no tienen ese estado**: reciben una
+**prop-función** para pedir el cambio.
+
+```jsx
+// App.jsx — el estado vive aquí
+const [pantalla, setPantalla] = useState('login');
+
+return pantalla === 'login'
+  ? <Login onCambiarPantalla={() => setPantalla('registro')} />
+  : <Registro onCambiarPantalla={() => setPantalla('login')} />;
+```
+
+```jsx
+// Login.jsx — recibe la función por props y la usa al pinchar
+function Login({ onCambiarPantalla }) {
+  return (
+    <p>¿No tienes cuenta?
+      <button type="button" onClick={onCambiarPantalla}>Regístrate</button>
+    </p>
+  );
+}
+```
+
+Flujo: el usuario pincha → se ejecuta la función **que vive en App** → App cambia
+su estado → App re-renderiza → pinta la otra pantalla. Es el mantra:
+**"las props bajan, los eventos suben"**.
+
+> La prop se desestructura en la firma: `function Login({ onCambiarPantalla })`.
+> Sin las llaves, recibirías **el objeto props entero** y `onCambiarPantalla` sería
+> el objeto, no la función.
+
+### Validación de formularios (patrón usado)
+
+1. `validar()` devuelve un **objeto de errores** vacío si todo está bien:
+   ```jsx
+   const nuevosErrores = {};
+   if (!!!validarEmail(email)) nuevosErrores.email = 'El email no es valido';
+   return nuevosErrores;
+   ```
+2. `handleSubmit` llama a `validar()`; si hay errores los guarda en el estado;
+   si no, marca éxito:
+   ```jsx
+   if (Object.keys(nuevosErrores).length > 0) setErrores(nuevosErrores);
+   else setExito(true);
+   ```
+3. El mensaje se pinta solo si existe error:
+   ```jsx
+   {errores.email && <p className="error">{errores.email}</p>}
+   ```
+4. `noValidate` en el `<form>` para que el navegador **no meta su burbuja nativa**
+   (la que salía en inglés) y mande solo nuestra validación.
+
+**Trampa de las contraseñas vacías:** dos contraseñas vacías **son iguales**
+(`'' === ''` es `true`), así que el chequeo "deben coincidir" solo no basta.
+Por eso comprobamos también `password.trim() === ''` → "obligatoria".
+El orden importa: en Registro se comprueba "coinciden" y luego "obligatoria"
+(la última asignación gana).
+
+### Limpiar el error al escribir (spread a la defensiva)
+
+El error se quedaba "todo el rato" aunque corrigieras. Solución: al escribir,
+borrar el error de **ese campo** sin tocar los demás:
+
+```jsx
+onChange={(e) => {
+  setPassword(e.target.value);
+  setErrores({ ...errores, password: undefined });
+}}
+```
+
+- `...errores` → copia todos los errores que había.
+- `, password: undefined` → deja el de password sin valor.
+- Sin el spread, `{ password: undefined }` **destruiría los demás errores**:
+  corregir el email borraría los avisos de nombre y contraseñas.
+
+> Regla de la función flecha en JSX: una sola instrucción → `(e) => algo`; dos o
+> más → `(e) => { algo; yOtraCosa; }` (con llaves). Las dos sueltas sin llaves no
+> compilan.
+
+### Trampa del botón dentro del `<form>`
+
+Un `<button>` dentro de un `<form>` es por defecto `type="submit"`: al pulsarlo
+dispara el `onSubmit`. Si solo quieres navegar (no validar), ponle
+`type="button"` — lo convierte en botón "tonto" que solo hace tu `onClick`.
+
+### DRY aplicado: validaciones compartidas
+
+La regex del email estaba duplicada en Login y Registro. Se extrae a un módulo
+común y se importa donde haga falta (misma lección que el `showToast` de
+PomodoroZion):
+
+```jsx
+// src/utils/validaciones.js
+export const validarEmail = (email) =>
+  /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(String(email).toLowerCase());
+```
+
+```jsx
+// Login.jsx y Registro.jsx
+import { validarEmail } from '../../../utils/validaciones.js';
+```
+
+### Minievaluación (3/5) — repasar 1 y 2
+
+- ✅ "Las dos contraseñas vacías pasan el chequeo de coincidencia" (trampa vacío).
+- ✅ El spread mantiene los demás errores.
+- 🔁 `useState`: el setter es la única vía para que React repinte; no se "comprueba".
+- 🔁 props: el hijo guarda y llama la función que le da el padre; el estado vive arriba.
+- ➖ El `type="button"` evita que el botón de navegación dispare el submit.
+
+## 16. React por dentro, en cristiano (la cocina)
+
+Mental model que haga *click* sin jerga.
+
+### El Virtual DOM es el boceto en papel
+
+Antes de pintar la pared de verdad, React hace un **boceto en papel** de lo que va a
+pintar. Ese papel es el Virtual DOM: **objetos JS planos**, no elementos HTML reales.
+Cuando algo cambia, tira el boceto viejo, hace uno nuevo y **solo pinta en la pared
+lo que se ha movido** (diffing). No repinta todo.
+
+> El JSX `<input value="hola" />` se compila a `React.createElement('input', {...})`
+> que devuelve un objeto plano tipo `{ type: 'input', props: { value: 'hola' } }`.
+> Ese objeto es el Virtual DOM. No es el `HTMLInputElement` del navegador.
+
+### Componente = receta
+
+Un componente es una **función**: la receta. React la ejecuta de arriba abajo y lo
+que devuelve por `return` es el plato servido (lo que ve el usuario). Cuando un
+setter cambia el estado, React **vuelve a ejecutar la receta**, vuelve a mirar el
+boceto y pinta la diferencia.
+
+| Cocina | React |
+|---|---|
+| Ingredientes | Estado (`useState`) |
+| Pasos de cocina | Funciones (`validar()`, `handleSubmit`) |
+| El plato servido | El `return` (JSX) |
+| El camarero que avisa | El setter (`setPassword`) |
+
+### `useState` = post-it + boli
+
+```jsx
+const [password, setPassword] = useState('');
+```
+
+React te da un **post-it** (`password`) y un **boli** (`setPassword`). El post-it
+solo se escribe con ese boli:
+
+- `setPassword('abc')` → avisa a React y repinta. ✅
+- `password = 'abc'` → cambias el post-it en secreto y React no se entera → la
+  pared no cambia nunca. ❌
+
+El `''` es el valor de arranque: se usa **solo en el primer render**. Después,
+`useState` devuelve lo que haya en su slot interno (React guarda el estado por
+posición de los hooks, por eso deben ir siempre arriba y en el mismo orden).
+
+### La regla del tomate (estado vs. no-estado)
+
+- 🌱 **No cambia** → `const` normal, sin `useState`:
+  ```jsx
+  const titulo = 'Bienvenido';
+  ```
+  Mejor aún **fuera del componente** si no depende del estado, para no re-crearlo
+  en cada render.
+- 🍳 **Cambia pero solo mientras se cocina** (temporal: `const nuevosErrores` en
+  `validar()`) → `const` local, se recalcula sola en cada ejecución.
+- 🔴 **Cambia con el tiempo y la UI debe enterarse** → `useState` con su setter.
+
+> Consejo: `useState` solo para lo que necesita vivir entre renders y repintar.
+> Un componente sin estado (como el `Contador` hijo que solo recibe props) es
+> perfectamente válido: "cocina en crudo".
