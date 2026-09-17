@@ -4,16 +4,16 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.example</groupId>
-    <artifactId>demoJakarta</artifactId>
+    <groupId>es.daw</groupId>
+    <artifactId>InitDemoServlet</artifactId>
     <version>1.0-SNAPSHOT</version>
-    <name>demoJakarta</name>
+    <name>InitDemoServlet</name>
     <packaging>war</packaging>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.target>17</maven.compiler.target>
-        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+        <maven.compiler.source>8</maven.compiler.source>
         <junit.version>6.1.3</junit.version>
     </properties>
 
